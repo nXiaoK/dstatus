@@ -12,8 +12,8 @@
  * @returns {Array} 填充后的数组
  */
 function pad(arr, len) {
-    for(var i = arr.length; i < len; ++i)
-        arr.unshift({cpu: 0, mem: 0, swap: 0, ibw: 0, obw: 0});
+    for (var i = arr.length; i < len; ++i)
+        arr.unshift({ cpu: 0, mem: 0, swap: 0, ibw: 0, obw: 0, iow: 0, ior: 0 });
     return arr;
 }
 
@@ -44,6 +44,8 @@ module.exports = (DB) => {
                         swap REAL,
                         ibw REAL,
                         obw REAL,
+                        iow REAL,
+                        ior REAL,
                         expire_time INTEGER,
                         created_at INTEGER DEFAULT (strftime('%s', 'now'))
                     )
@@ -65,10 +67,10 @@ module.exports = (DB) => {
                     // 复制数据
                     DB.prepare(`
                         INSERT INTO ${table}_new (
-                            sid, cpu, mem, swap, ibw, obw, expire_time, created_at
+                            sid, cpu, mem, swap, ibw, obw,iow,ior, expire_time, created_at
                         )
                         SELECT 
-                            sid, cpu, mem, swap, ibw, obw, expire_time, 
+                            sid, cpu, mem, swap, ibw, obw,,iow,ior, expire_time, 
                             strftime('%s', 'now')
                         FROM ${table}
                     `).run();
@@ -98,13 +100,13 @@ module.exports = (DB) => {
              * @param {string} sid - 服务器ID
              */
             ins(sid) {
-                this._ins.run({sid, cpu: 0, mem: 0, swap: 0, ibw: 0, obw: 0});
+                this._ins.run({ sid, cpu: 0, mem: 0, swap: 0, ibw: 0, obw: 0, iow: 0, ior: 0 });
             },
             _ins: DB.prepare(`
                 INSERT INTO ${table} (
-                    sid, cpu, mem, swap, ibw, obw, expire_time
+                    sid, cpu, mem, swap, ibw, obw ,iow,ior,expire_time
                 ) VALUES (
-                    @sid, @cpu, @mem, @swap, @ibw, @obw, 
+                    @sid, @cpu, @mem, @swap, @ibw, @obw, @iow, @ior, 
                     strftime('%s', 'now') + 86400
                 )
             `),
@@ -139,17 +141,17 @@ module.exports = (DB) => {
              * @param {string} sid - 服务器ID
              * @param {Object} stats - 负载数据
              */
-            shift(sid, {cpu, mem, swap, ibw, obw}) {
+            shift(sid, { cpu, mem, swap, ibw, obw, iow, ior }) {
                 try {
                     // 开始事务
                     DB.prepare('BEGIN').run();
-                    
+
                     // 删除最老的记录，保持记录数量不超过len
                     this._del_old.run(sid, this.len - 1);
-                    
+
                     // 插入新记录
-                    this._ins.run({sid, cpu, mem, swap, ibw, obw});
-                    
+                    this._ins.run({ sid, cpu, mem, swap, ibw, obw, iow, ior });
+
                     // 提交事务
                     DB.prepare('COMMIT').run();
                 } catch (err) {

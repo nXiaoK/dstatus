@@ -135,6 +135,50 @@ module.exports = (DB) => {
                 // 执行所有操作
                 return operations.every(sql => safeExecute(sql));
             }
+        },
+        {
+            version: 4,
+            name: '添加磁盘带宽记录字段',
+            up: () => {
+                const operations = [
+                    // 添加磁盘带宽记录字段
+                    !columnExists('load_m', 'iow') ?
+                    `ALTER TABLE load_m ADD COLUMN iow REAL;` : null,
+                    !columnExists('load_m', 'ior') ?
+                    `ALTER TABLE load_m ADD COLUMN ior REAL;` : null,
+                    !columnExists('load_h', 'iow') ?
+                    `ALTER TABLE load_h ADD COLUMN iow REAL;` : null,
+                    !columnExists('load_h', 'ior') ?
+                    `ALTER TABLE load_h ADD COLUMN ior REAL;` : null,
+
+                   
+                ].filter(sql => sql !== null);
+
+                // 执行所有操作
+                return operations.every(sql => safeExecute(sql));
+            }
+        },
+        {
+            version: 5,
+            name: '添加磁盘带宽记录字段',
+            up: () => {
+                const operations = [
+                    // 添加磁盘带宽记录字段
+                    !columnExists('load_m', 'iow') ?
+                    `ALTER TABLE load_m ADD COLUMN iow REAL;` : null,
+                    !columnExists('load_m', 'ior') ?
+                    `ALTER TABLE load_m ADD COLUMN ior REAL;` : null,
+                    !columnExists('load_h', 'iow') ?
+                    `ALTER TABLE load_h ADD COLUMN iow REAL;` : null,
+                    !columnExists('load_h', 'ior') ?
+                    `ALTER TABLE load_h ADD COLUMN ior REAL;` : null,
+
+                   
+                ].filter(sql => sql !== null);
+
+                // 执行所有操作
+                return operations.every(sql => safeExecute(sql));
+            }
         }
         // 在这里添加更多的迁移版本
     ];

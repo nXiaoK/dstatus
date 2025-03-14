@@ -47,6 +47,8 @@ function initDatabase() {
             swap REAL,
             ibw REAL,
             obw REAL,
+            iow REAL,
+            ior REAL,
             expire_time INTEGER,
             PRIMARY KEY(sid)
         )
@@ -61,6 +63,8 @@ function initDatabase() {
             swap REAL,
             ibw REAL,
             obw REAL,
+            iow REAL,
+            ior REAL,
             expire_time INTEGER,
             PRIMARY KEY(sid)
         )

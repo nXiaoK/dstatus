@@ -4,7 +4,7 @@ WORKDIR /app
 COPY . ./
 RUN npm install
 
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 # 安装 Node.js 和必要的依赖
 RUN apt-get update && apt-get install -y \

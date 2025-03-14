@@ -5,7 +5,7 @@
  * y: 年, M: 月, d: 日
  * H: 时, m: 分, s: 秒, S: 毫秒
  */
-Date.prototype.Format = function(fmt) {
+Date.prototype.Format = function (fmt) {
     const o = {
         'M+': this.getMonth() + 1,
         'd+': this.getDate(),
@@ -83,23 +83,31 @@ const minuteData = {
     swap: [],
     ibw: [],
     obw: [],
-    labels: []
+    labels: [],
+    ior: [],
+    iow: []
 };
 
 // 处理60分钟数据
 for (const data of load_m) {
     if (!data) continue;
-    const {cpu = -1, mem = -1, swap = -1, ibw = -1, obw = -1} = data;
-    
+    const { cpu = -1, mem = -1, swap = -1, ibw = -1, obw = -1, ior = -1, iow = -1 } = data;
+
     // 带宽转换为Mbps
-    const safeIbw = ibw === -1 ? 0 : Number((ibw / 128 / 1024).toFixed(2));
-    const safeObw = obw === -1 ? 0 : Number((obw / 128 / 1024).toFixed(2));
-    
+    const safeIbw = ibw === -1 ? 0 : ibw;
+    const safeObw = obw === -1 ? 0 : obw;
+
+
+    const safeIow = iow === -1 ? 0 : iow;
+    const safeIor = ior === -1 ? 0 : ior;
+
     minuteData.cpu.push(safeFormatNumber(cpu));
     minuteData.mem.push(safeFormatNumber(mem));
     minuteData.swap.push(safeFormatNumber(swap));
     minuteData.ibw.push(safeIbw);
     minuteData.obw.push(safeObw);
+    minuteData.iow.push(safeIow);
+    minuteData.ior.push(safeIor);
 }
 
 // 填充不足60个点的数据
@@ -109,6 +117,8 @@ while (minuteData.cpu.length < 60) {
     minuteData.swap.push(0);
     minuteData.ibw.push(0);
     minuteData.obw.push(0);
+    minuteData.iow.push(0);
+    minuteData.ior.push(0);
 }
 
 // 生成60分钟的时间标签
@@ -135,22 +145,28 @@ const hourData = {
     swap: [],
     ibw: [],
     obw: [],
-    labels: []
+    labels: [],
+    ior: [],
+    iow: []
 };
 
 // 处理24小时数据
 for (const data of load_h) {
     if (!data) continue;
-    const {cpu = -1, mem = -1, swap = -1, ibw = -1, obw = -1} = data;
-    
-    const safeIbw = ibw === -1 ? null : Number((ibw / 128 / 1024).toFixed(2));
-    const safeObw = obw === -1 ? null : Number((obw / 128 / 1024).toFixed(2));
-    
+    const { cpu = -1, mem = -1, swap = -1, ibw = -1, obw = -1, ior = -1, iow = -1 } = data;
+
+    const safeIbw = ibw === -1 ? null : ibw;
+    const safeObw = obw === -1 ? null : obw;
+    const safeIow = iow === -1 ? 0 : iow;
+    const safeIor = ior === -1 ? 0 : ior;
+
     hourData.cpu.push(safeFormatNumber(cpu));
     hourData.mem.push(safeFormatNumber(mem));
     hourData.swap.push(safeFormatNumber(swap));
     hourData.ibw.push(safeIbw);
     hourData.obw.push(safeObw);
+    hourData.iow.push(safeIow);
+    hourData.ior.push(safeIor);
 }
 
 // 生成24小时的时间标签
@@ -208,12 +224,12 @@ function createLoadChartOptions(data, title = '') {
             shared: true,
             x: {
                 ...baseChartOptions.tooltip.x,
-                formatter: function(value, { dataPointIndex }) {
+                formatter: function (value, { dataPointIndex }) {
                     return safeData.labels[dataPointIndex] || '';
                 }
             },
             y: {
-                formatter: function(value) {
+                formatter: function (value) {
                     return Math.round(value) + '%';
                 }
             }
@@ -224,7 +240,7 @@ function createLoadChartOptions(data, title = '') {
                 style: {
                     colors: '#94a3b8'
                 },
-                formatter: function(value) {
+                formatter: function (value) {
                     // 每2分钟显示一次标签
                     const index = safeData.labels.indexOf(value);
                     if (index === -1 || !value) return '';
@@ -305,14 +321,14 @@ function createBandwidthChartOptions(data, title = '') {
             shared: true,
             x: {
                 ...baseChartOptions.tooltip.x,
-                formatter: function(value, { dataPointIndex }) {
+                formatter: function (value, { dataPointIndex }) {
                     return safeData.labels[dataPointIndex] || '';
                 }
             },
             y: {
-                formatter: function(value) {
-                    if (value === null || !isFinite(value)) return '0 Mbps';
-                    return value.toFixed(2) + ' Mbps';
+                formatter: function (val) {
+                    if (!isFinite(val)) return '0 B/s';
+                    return strByteRate(val);
                 }
             }
         },
@@ -322,7 +338,7 @@ function createBandwidthChartOptions(data, title = '') {
                 style: {
                     colors: '#94a3b8'
                 },
-                formatter: function(value) {
+                formatter: function (value) {
                     // 每2分钟显示一次标签
                     const index = safeData.labels.indexOf(value);
                     if (index === -1 || !value) return '';
@@ -342,8 +358,8 @@ function createBandwidthChartOptions(data, title = '') {
         yaxis: {
             labels: {
                 formatter: (val) => {
-                    if (val === null || !isFinite(val)) return '0 Mbps';
-                    return val.toFixed(2) + ' Mbps';
+                    if (!isFinite(val)) return '0 B/s';
+                    return strByteRate(val);
                 },
                 style: {
                     colors: '#94a3b8'  // 统一颜色
@@ -362,6 +378,141 @@ function createBandwidthChartOptions(data, title = '') {
     };
 }
 
+
+/**
+ * 将字节/秒速率转成可读形式:
+ * - < 1 MB => xxx KB/s
+ * - < 1 GB => xxx MB/s
+ * - >= 1 GB => xxx GB/s
+ * 
+ * @param {number} bps - 字节每秒(B/s)
+ * @returns {string} 格式化后的速率字符串
+ */
+function strByteRate(bps) {
+    if (!bps || bps < 0) bps = 0;
+
+    const KB = 1024;
+    const MB = 1024 * 1024;
+    const GB = 1024 * 1024 * 1024;
+
+    if (bps < MB) {
+        // 显示 KB/s (保留2位小数)
+        return (bps / KB).toFixed(2) + ' KB/s';
+    } else if (bps < GB) {
+        // 显示 MB/s
+        return (bps / MB).toFixed(2) + ' MB/s';
+    } else {
+        // 显示 GB/s
+        return (bps / GB).toFixed(2) + ' GB/s';
+    }
+}
+
+
+/**
+ * 创建带宽图表配置
+ * @param {Object} data - 图表数据对象
+ * @param {string} title - 图表标题
+ * @returns {Object} 图表配置对象
+ */
+function createDiskChartOptions(data, title = '') {
+    // 确保数据安全性
+    const safeData = {
+        iow: Array.isArray(data.iow) ? data.iow.map(v => v === null ? 0 : v) : [],
+        ior: Array.isArray(data.ior) ? data.ior.map(v => v === null ? 0 : v) : [],
+        labels: Array.isArray(data.labels) ? data.labels : []
+    };
+
+    return {
+        ...baseChartOptions,
+        colors: [
+            '#0ea5e9',  // 下行 - 浅蓝色
+            '#2563eb'   // 上行 - 深蓝色
+        ],
+        series: [{
+            name: '写入',
+            data: safeData.iow
+        }, {
+            name: '读取',
+            data: safeData.ior
+        }],
+        chart: {
+            ...baseChartOptions.chart,
+            type: 'area',
+            animations: {
+                enabled: true,
+                easing: 'linear',
+                dynamicAnimation: {
+                    speed: 1000
+                }
+            },
+            toolbar: {
+                show: false
+            }
+        },
+        tooltip: {
+            ...baseChartOptions.tooltip,
+            enabled: true,
+            shared: true,
+            x: {
+                ...baseChartOptions.tooltip.x,
+                formatter: function (value, { dataPointIndex }) {
+                    return safeData.labels[dataPointIndex] || '';
+                }
+            },
+            y: {
+                formatter: function (val) {
+                    if (!isFinite(val)) return '0 B/s';
+                    return strByteRate(val);
+                }
+            }
+        },
+        xaxis: {
+            categories: safeData.labels,
+            labels: {
+                style: {
+                    colors: '#94a3b8'
+                },
+                formatter: function (value) {
+                    // 每2分钟显示一次标签
+                    const index = safeData.labels.indexOf(value);
+                    if (index === -1 || !value) return '';
+                    return index % 2 === 0 ? value : '';
+                },
+                rotate: 0,
+                trim: false
+            },
+            axisBorder: {
+                show: false
+            },
+            axisTicks: {
+                show: false
+            },
+            tickPlacement: 'on'
+        },
+        yaxis: {
+            labels: {
+                formatter: (val) => {
+                    if (!isFinite(val)) return '0 B/s';
+                    return strByteRate(val);
+                },
+                style: {
+                    colors: '#94a3b8'  // 统一颜色
+                }
+            }
+        },
+        fill: {
+            type: 'gradient',
+            gradient: {
+                shadeIntensity: 1,
+                opacityFrom: 0.35,
+                opacityTo: 0.05,
+                stops: [0, 95, 100]
+            }
+        }
+    };
+}
+
+
 /**
  * 实时数据存储对象
  * 用于存储最近1分钟的系统负载数据（每2秒一个点，共30个点）
@@ -370,7 +521,8 @@ const realtimeData = {
     cpu: new Array(30).fill(0),
     mem: new Array(30).fill(0),
     swap: new Array(30).fill(0),
-    labels: Array(30).fill('')
+    labels: Array(30).fill(''),
+
 };
 
 /**
@@ -378,7 +530,7 @@ const realtimeData = {
  */
 function initTimeLabels() {
     const now = new Date();
-    for(let i = 0; i < 30; i++) {
+    for (let i = 0; i < 30; i++) {
         const time = new Date(now - (30 - i) * 2000);
         realtimeData.labels[i] = time.Format('HH:mm:ss');
     }
@@ -391,7 +543,14 @@ function initTimeLabels() {
 const realtimeBandwidthData = {
     ibw: new Array(90).fill(0),
     obw: new Array(90).fill(0),
-    labels: Array(90).fill('')
+    labels: Array(90).fill(''),
+};
+
+
+const diskRealtimeData = {
+    read: new Array(90).fill(0),
+    write: new Array(90).fill(0),
+    labels: new Array(90).fill('')
 };
 
 /**
@@ -399,7 +558,7 @@ const realtimeBandwidthData = {
  */
 function initBandwidthTimeLabels() {
     // 生成固定的参考时间标签（每2秒一个点，共90个点，每10秒显示一个标签）
-    for(let i = 0; i < 90; i++) {
+    for (let i = 0; i < 90; i++) {
         const seconds = 180 - (i * 2);  // 从180秒开始倒数
         if (i === 89) {
             realtimeBandwidthData.labels[i] = '最新';
@@ -411,6 +570,24 @@ function initBandwidthTimeLabels() {
     }
 }
 
+/**
+ * 初始化 3 分钟磁盘带宽的时间标签
+ * 每隔2秒一个点 => 90点 => 180秒(3分钟)
+ * 每10秒显示一次标签
+ */
+function initDiskRealtimeLabels() {
+    for (let i = 0; i < 90; i++) {
+        const seconds = 180 - i * 2; // 3分钟=180秒
+        if (i === 89) {
+            diskRealtimeData.labels[i] = '最新';
+        } else if (seconds % 10 === 0) {
+            diskRealtimeData.labels[i] = `${seconds}s`;
+        } else {
+            diskRealtimeData.labels[i] = '';
+        }
+    }
+}
+
 // 声明全局图表实例
 let tenMinLoadChart;
 let realtimeBandwidthChart;
@@ -418,37 +595,52 @@ let loadChartMinute;
 let loadChartHour;
 let bandwidthChartMinute;
 let bandwidthChartHour;  // 添加24小时带宽图表实例
+let realtimeDiskChart;
+let diskChartMinute;
+let diskChartHour;
 
 // 页面加载完成后的初始化
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // 初始化时间标签
     initTimeLabels();
     initBandwidthTimeLabels();
-    
+
     // 创建各个图表实例
     tenMinLoadChart = createTenMinLoadChart();
     realtimeBandwidthChart = createRealtimeBandwidthChart();
-    
+    realtimeDiskChart = createRealtimeDiskChart();
+
+
     loadChartMinute = new ApexCharts(
         document.querySelector("#load-m"),
         createLoadChartOptions(minuteData, '过去60分钟系统负载')
     );
-    
+
     bandwidthChartMinute = new ApexCharts(
-        document.querySelector("#load-m-bw"), 
+        document.querySelector("#load-m-bw"),
         createBandwidthChartOptions(minuteData, '过去60分钟带宽使用')
     );
-    
+
     loadChartHour = new ApexCharts(
         document.querySelector("#load-h"),
         createLoadChartOptions(hourData, '过去24小时系统负载')
     );
-    
+
     bandwidthChartHour = new ApexCharts(
         document.querySelector("#load-h-bw"),
         createBandwidthChartOptions(hourData, '过去24小时带宽统计')
     );
-    
+
+    diskChartMinute = new ApexCharts(
+        document.querySelector("#disk-60m-chart"),
+        createDiskChartOptions(minuteData, '过去60分钟磁盘带宽使用')
+    );
+    diskChartHour = new ApexCharts(
+        document.querySelector("#disk-24h-chart"),
+        createDiskChartOptions(hourData, '过去24小时磁盘带宽统计')
+    );
+
+
     // 渲染图表
     tenMinLoadChart.render();
     realtimeBandwidthChart.render();
@@ -456,53 +648,55 @@ document.addEventListener('DOMContentLoaded', function() {
     bandwidthChartMinute.render();
     loadChartHour.render();
     bandwidthChartHour.render();  // 渲染24小时带宽图表
-    
+    realtimeDiskChart.render();
+    diskChartMinute.render();
+    diskChartHour.render();
     // 设置定时更新
-    let updateTimer = setInterval(async () => {
-        try {
-            const response = await fetch("/stats/data");
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-            await updateCharts(data);
-        } catch (error) {
-            console.error('Error updating charts:', error);
-        }
-    }, UPDATE_INTERVAL);
-    
-    // 清理函数
-    function cleanup() {
-        if (updateTimer) {
-            clearInterval(updateTimer);
-            updateTimer = null;
-        }
-    }
-    
-    // 页面可见性变化处理
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-            cleanup();
-        } else {
-            if (!updateTimer) {
-                updateTimer = setInterval(async () => {
-                    try {
-                        const response = await fetch("/stats/data");
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        const data = await response.json();
-                        await updateCharts(data);
-                    } catch (error) {
-                        console.error('Error updating charts:', error);
-                    }
-                }, UPDATE_INTERVAL);
-            }
-        }
-    });
-    
-    // 页面卸载时清理
-    window.addEventListener('beforeunload', cleanup);
+    // let updateTimer = setInterval(async () => {
+    //     try {
+    //         const response = await fetch("/stats/data");
+    //         if (!response.ok) {
+    //             throw new Error(`HTTP error! status: ${response.status}`);
+    //         }
+    //         const data = await response.json();
+    //         await updateCharts(data);
+    //     } catch (error) {
+    //         console.error('Error updating charts:', error);
+    //     }
+    // }, UPDATE_INTERVAL);
+
+    // // 清理函数
+    // function cleanup() {
+    //     if (updateTimer) {
+    //         clearInterval(updateTimer);
+    //         updateTimer = null;
+    //     }
+    // }
+
+    // // 页面可见性变化处理
+    // document.addEventListener('visibilitychange', () => {
+    //     if (document.hidden) {
+    //         cleanup();
+    //     } else {
+    //         if (!updateTimer) {
+    //             updateTimer = setInterval(async () => {
+    //                 try {
+    //                     const response = await fetch("/stats/data");
+    //                     if (!response.ok) {
+    //                         throw new Error(`HTTP error! status: ${response.status}`);
+    //                     }
+    //                     const data = await response.json();
+    //                     await updateCharts(data);
+    //                 } catch (error) {
+    //                     console.error('Error updating charts:', error);
+    //                 }
+    //             }, UPDATE_INTERVAL);
+    //         }
+    //     }
+    // });
+
+    // // 页面卸载时清理
+    // window.addEventListener('beforeunload', cleanup);
 });
 
 /**
@@ -513,7 +707,7 @@ async function updateCharts(data) {
     try {
         const nodeId = window.location.pathname.split('/').filter(Boolean)[1];
         const nodeData = data[nodeId];
-        
+
         // 增强数据验证
         if (!nodeData?.stat || typeof nodeData.stat !== 'object') {
             console.warn('Invalid node data structure');
@@ -522,44 +716,69 @@ async function updateCharts(data) {
 
         // 安全地访问数据
         const cpu = nodeData.stat.cpu || { multi: 0 };
-        const mem = nodeData.stat.mem || { 
+        const mem = nodeData.stat.mem || {
             virtual: { used: 0, total: 1, usedPercent: 0 },
             swap: { used: 0, total: 1, usedPercent: 0 }
         };
-        const net = nodeData.stat.net || { 
+        const net = nodeData.stat.net || {
             delta: { in: 0, out: 0 },
             total: { in: 0, out: 0 }
         };
-        
+        const disk = nodeData.stat.disk || { devices: {} }
+
+
         // 使用安全的数据访问方式
         const newCpuValue = safeFormatNumber((cpu.multi || 0) * 100);
         const newMemValue = safeFormatNumber(mem.virtual?.usedPercent || 0);
         const newSwapValue = safeFormatNumber(mem.swap?.usedPercent || 0);
-        
+
         // 处理带宽数据（转换为Mbps）
-        const newIbwValue = Number(((net.delta?.in || 0) / 128 / 1024).toFixed(2));
-        const newObwValue = Number(((net.delta?.out || 0) / 128 / 1024).toFixed(2));
-        
+        const newIbwValue = net.delta?.in || 0;
+        const newObwValue = net.delta?.out || 0;
+
+        // 累加全部分区的 read_rate / write_rate
+        let totalRead = 0;
+        let totalWrite = 0;
+        for (const mount in disk.devices) {
+            const dev = disk.devices[mount];
+            if (dev.read_rate) totalRead += dev.read_rate;
+            if (dev.write_rate) totalWrite += dev.write_rate;
+        }
+
+
+
+
         // 更新实时数据
         if (realtimeData) {
             realtimeData.cpu.shift();
             realtimeData.mem.shift();
             realtimeData.swap.shift();
-            
+
             realtimeData.cpu.push(newCpuValue);
             realtimeData.mem.push(newMemValue);
             realtimeData.swap.push(newSwapValue);
         }
-        
+
         // 更新带宽数据
         if (realtimeBandwidthData) {
             realtimeBandwidthData.ibw.shift();
             realtimeBandwidthData.obw.shift();
-            
+
             realtimeBandwidthData.ibw.push(newIbwValue);
             realtimeBandwidthData.obw.push(newObwValue);
         }
-        
+
+        // 更新磁盘带宽数据
+        if (diskRealtimeData) {
+            // 1) 移除最旧值
+            diskRealtimeData.read.shift();
+            diskRealtimeData.write.shift();
+
+            // 2) 追加最新值
+            diskRealtimeData.read.push(totalRead);
+            diskRealtimeData.write.push(totalWrite);
+        }
+
         // 更新图表
         if (tenMinLoadChart) {
             tenMinLoadChart.updateOptions({
@@ -575,7 +794,7 @@ async function updateCharts(data) {
                 }]
             });
         }
-        
+
         if (realtimeBandwidthChart) {
             realtimeBandwidthChart.updateOptions({
                 series: [{
@@ -587,7 +806,19 @@ async function updateCharts(data) {
                 }]
             });
         }
-        
+
+        if (realtimeDiskChart) {
+            realtimeDiskChart.updateOptions({
+                series: [{
+                    name: '读取',
+                    data: diskRealtimeData.read
+                }, {
+                    name: '写入',
+                    data: diskRealtimeData.write
+                }]
+            });
+        }
+
     } catch (error) {
         console.error('Error updating charts:', error);
     }
@@ -642,7 +873,7 @@ function createRealtimeChartOptions(data, timeLabels, options) {
                 style: {
                     colors: '#94a3b8'
                 },
-                formatter: function(value) {
+                formatter: function (value) {
                     return value;  // 直接返回预设的标签
                 }
             },
@@ -671,7 +902,7 @@ function createRealtimeChartOptions(data, timeLabels, options) {
  */
 function createTenMinLoadChart() {
     const timeLabels = createTimeLabels(30, 2, 10); // 30个点，每2秒一个，每10秒显示标签
-    
+
     return new ApexCharts(
         document.querySelector("#load-10m-chart"),
         createRealtimeChartOptions(realtimeData, timeLabels, {
@@ -726,7 +957,7 @@ function createTenMinLoadChart() {
  */
 function createRealtimeBandwidthChart() {
     const timeLabels = createTimeLabels(90, 2, 10); // 90个点，每2秒一个，每10秒显示标签
-    
+
     return new ApexCharts(
         document.querySelector("#bandwidth-realtime-chart"),
         createRealtimeChartOptions(realtimeBandwidthData, timeLabels, {
@@ -743,8 +974,8 @@ function createRealtimeBandwidthChart() {
                 data: realtimeBandwidthData.obw
             }],
             yaxisFormatter: (val) => {
-                if (val === null || !isFinite(val)) return '0 Mbps';
-                return val.toFixed(2) + ' Mbps';
+                if (!isFinite(val)) return '0 B/s';
+                    return strByteRate(val);
             },
             additional: {
                 fill: {
@@ -758,6 +989,54 @@ function createRealtimeBandwidthChart() {
                 },
                 title: {
                     text: '实时带宽监控 (3分钟)',
+                    align: 'left',
+                    style: {
+                        fontSize: '14px',
+                        color: '#64748b'
+                    }
+                }
+            }
+        })
+    );
+}
+
+/**
+ * 创建3分钟实时磁盘带宽图表
+ */
+function createRealtimeDiskChart() {
+    const timeLabels = createTimeLabels(90, 2, 10); // 90个点，每2秒一个，每10秒显示标签
+
+    return new ApexCharts(
+        document.querySelector("#disk-realtime-chart"),
+        createRealtimeChartOptions(diskRealtimeData, timeLabels, {
+            type: 'area',
+            colors: [
+                '#0ea5e9',  // 下行 - 浅蓝色
+                '#2563eb'   // 上行 - 深蓝色
+            ],
+            series: [{
+                name: '读取',
+                data: diskRealtimeData.read
+            }, {
+                name: '写入',
+                data: diskRealtimeData.write
+            }],
+            yaxisFormatter: (val) => {
+                if (!isFinite(val)) return '0 B/s';
+                    return strByteRate(val);
+            },
+            additional: {
+                fill: {
+                    type: 'gradient',
+                    gradient: {
+                        shadeIntensity: 1,
+                        opacityFrom: 0.35,
+                        opacityTo: 0.05,
+                        stops: [0, 95, 100]
+                    }
+                },
+                title: {
+                    text: '实时磁盘带宽监控 (3分钟)',
                     align: 'left',
                     style: {
                         fontSize: '14px',

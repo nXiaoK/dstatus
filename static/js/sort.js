@@ -6,10 +6,11 @@
 // 系统初始化管理器
 const SystemInitializer = {
     initialized: false,
-    
+
     async init() {
+        // 最早期检查游客状态并禁用拖拽
         if (this.initialized) return;
-        
+
         try {
             // 1. 等待页面完全加载
             await new Promise(resolve => {
@@ -19,13 +20,13 @@ const SystemInitializer = {
                     window.addEventListener('load', resolve, { once: true });
                 }
             });
-            
+
             // 2. 等待 StatsController 加载
             await this.ensureControllerLoaded();
-            
+
             // 3. 等待首次数据更新完成
             await this.ensureFirstDataLoad();
-            
+
             // 4. 初始化各个管理器
             await Promise.all([
                 TabManager.init(),
@@ -33,7 +34,7 @@ const SystemInitializer = {
                 DataManager.init(),
                 DragManager.init()
             ]);
-            
+
             this.initialized = true;
             console.log('系统初始化完成');
         } catch (error) {
@@ -45,7 +46,7 @@ const SystemInitializer = {
     async ensureControllerLoaded() {
         let retries = 0;
         const maxRetries = 20;
-        
+
         while (retries < maxRetries) {
             if (typeof StatsController !== 'undefined') {
                 console.log('StatsController 加载完成');
@@ -57,11 +58,11 @@ const SystemInitializer = {
         }
         throw new Error('StatsController 加载超时');
     },
-    
+
     async ensureFirstDataLoad() {
         let retries = 0;
         const maxRetries = 20;
-        
+
         while (retries < maxRetries) {
             // 检查是否有服务器卡片被渲染
             const cards = document.querySelectorAll('.server-card');
@@ -71,13 +72,13 @@ const SystemInitializer = {
                     const cpu = card.querySelector('[id$="_CPU"]');
                     return cpu && cpu.textContent !== 'NaN';
                 });
-                
+
                 if (hasData) {
                     console.log('数据加载完成');
                     return true;
                 }
             }
-            
+
             // 尝试触发数据更新
             if (typeof StatsController !== 'undefined') {
                 try {
@@ -86,7 +87,7 @@ const SystemInitializer = {
                     console.warn('数据更新失败，重试中...', error);
                 }
             }
-            
+
             await new Promise(resolve => setTimeout(resolve, 500));
             retries++;
             console.log(`等待数据加载... (${retries}/${maxRetries})`);
@@ -104,31 +105,32 @@ const StateManager = {
         connectionStatus: 'disconnected',
         dragActive: false
     },
-    
+
     observers: new Set(),
-    
+
     async init() {
+
         this.initEventListeners();
         return true;
     },
-    
+
     setState(newState) {
         Object.assign(this.state, newState);
         this.notifyObservers();
     },
-    
+
     subscribe(callback) {
         this.observers.add(callback);
     },
-    
+
     unsubscribe(callback) {
         this.observers.delete(callback);
     },
-    
+
     notifyObservers() {
         this.observers.forEach(callback => callback(this.state));
     },
-    
+
     initEventListeners() {
         window.addEventListener('statsUpdate', () => {
             this.setState({ lastUpdateTime: Date.now() });
@@ -140,30 +142,30 @@ const StateManager = {
 const DataManager = {
     updateInterval: null,
     retryTimeout: null,
-    
+
     async init() {
         this.startAutoUpdate();
         return true;
     },
-    
+
     async updateStats() {
         if (StateManager.state.isUpdating) return;
-        
+
         try {
             StateManager.setState({ isUpdating: true });
-            
+
             if (typeof StatsController === 'undefined') {
                 throw new Error('StatsController not found');
             }
-            
+
             await StatsController.update();
-            
+
             StateManager.setState({
                 lastUpdateTime: Date.now(),
                 updateError: null,
                 connectionStatus: 'connected'
             });
-            
+
         } catch (error) {
             console.error('数据更新失败:', error);
             StateManager.setState({
@@ -175,19 +177,19 @@ const DataManager = {
             StateManager.setState({ isUpdating: false });
         }
     },
-    
+
     startAutoUpdate(interval = 2000) {
         this.stopAutoUpdate();
         this.updateInterval = setInterval(() => this.updateStats(), interval);
     },
-    
+
     stopAutoUpdate() {
         if (this.updateInterval) {
             clearInterval(this.updateInterval);
             this.updateInterval = null;
         }
     },
-    
+
     scheduleRetry(delay = 5000) {
         if (this.retryTimeout) {
             clearTimeout(this.retryTimeout);
@@ -216,31 +218,31 @@ const SortableConfig = {
         easing: "cubic-bezier(0.4, 0, 0.2, 1)",
         delay: 100,
         delayOnTouchOnly: true,
-        
+
         // 拖拽样式
         ghostClass: "opacity-50",
         dragClass: "dragging",
         chosenClass: "chosen",
-        
+
         // 性能优化
         forceFallback: false,
         fallbackTolerance: 3,
         fallbackOnBody: true,
-        
+
         // 滚动设置
         scroll: true,
         scrollSensitivity: 30,
         scrollSpeed: 10,
-        
+
         // 排序设置
         swapThreshold: 0.65,
         invertSwap: true,
-        
+
         // 禁用离线和隐藏项
         filter: '.offline, .hidden',
         preventOnFilter: true
     },
-    
+
     // 移动端配置
     mobile: {
         delay: 300,
@@ -263,16 +265,16 @@ const DragAPI = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ group_id: groupId })
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
             if (!result.success) {
                 throw new Error(result.message || '更新分组失败');
             }
-            
+
             return result;
         } catch (error) {
             console.error('更新服务器分组失败:', error);
@@ -285,21 +287,21 @@ const DragAPI = {
             const response = await fetch(this.endpoints.updateOrder, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     servers: serverIds,
                     group_context: true // 添加标记，表明这是分组上下文的排序
                 })
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
             if (!result.status) {
                 throw new Error(result.msg || '更新排序失败');
             }
-            
+
             return result;
         } catch (error) {
             console.error('更新服务器排序失败:', error);
@@ -337,21 +339,33 @@ const DragManager = {
     initRetries: 0,
     maxRetries: 5,
     retryDelay: 1000,
-    
+
     // 添加全局状态检查
     isDragEnabled() {
+        // 若是游客则直接返回 false
+        if (window.isGuestMode) {
+            return false;
+        }
         const dragSortToggle = document.getElementById('enable-drag-sort');
         return dragSortToggle && dragSortToggle.checked && !dragSortToggle.disabled;
     },
 
+    getContainers() {
+        // 这里根据你的页面结构，返回所有需要支持拖拽的 .grid 容器
+        // 例如，下面这样选出所有 .group-view 里的 .grid
+        return document.querySelectorAll('.group-view .grid');
+    },
+
+
     init() {
+
         // 检查拖拽是否启用
         if (!this.isDragEnabled()) {
             console.log('拖拽功能已禁用');
             this.destroy(); // 确保清理任何可能的实例
             return;
         }
-        
+
         this.createSortables(this.getContainers());
     },
 
@@ -360,27 +374,36 @@ const DragManager = {
         if (!this.isDragEnabled()) {
             return [];
         }
-        
+
         containers.forEach(grid => {
             if (this.sortableInstances.has(grid)) {
                 this.sortableInstances.get(grid).destroy();
                 this.sortableInstances.delete(grid);
             }
-            
+
             const groupId = grid.closest('.group-view')?.dataset.group;
             const isAllView = groupId === 'all';
-            
+
             // 确保所有卡片的 draggable 属性正确设置
             grid.querySelectorAll('.server-card').forEach(card => {
                 card.draggable = this.isDragEnabled();
+                const handle = card.querySelector('.server-card-handle');
+                if (handle) {
+                    if (!this.isDragEnabled()) {
+                        handle.classList.remove('cursor-move');
+                    } else {
+                        handle.classList.add('cursor-move');
+                    }
+                }
             });
-            
+
             const sortable = new Sortable(grid, {
                 ...SortableConfig.base,
                 animation: 150,
                 delay: 50,
                 delayOnTouchOnly: true,
-                
+                disabled: !this.isDragEnabled(),
+
                 // 根据不同视图设置不同的排序权限
                 sort: isAllView, // 只在全部视图允许排序
                 group: {
@@ -388,15 +411,15 @@ const DragManager = {
                     pull: !isAllView, // 分组视图允许拖出
                     put: !isAllView  // 分组视图允许放入
                 },
-                
+
                 ghostClass: "sortable-ghost",
                 chosenClass: "sortable-chosen",
                 dragClass: "sortable-drag",
-                
+
                 swapThreshold: 0.65,
                 invertSwap: true,
                 direction: 'vertical',
-                
+
                 // 添加拖拽前的状态检查
                 onStart: (evt) => {
                     if (!this.isDragEnabled()) {
@@ -406,21 +429,21 @@ const DragManager = {
                     const item = evt.item;
                     const container = evt.from;
                     const fromGroupId = container.closest('.group-view')?.dataset.group;
-                    
+
                     // 记录开始拖拽的位置
                     DragState.drag = {
                         ...DragState.drag,
                         startIndex: Array.from(container.children).indexOf(item),
                         sourceGroup: fromGroupId
                     };
-                    
+
                     // 添加视觉反馈
                     requestAnimationFrame(() => {
                         item.style.opacity = '0.95';
                         item.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
                     });
                 },
-                
+
                 onMove: (evt, originalEvent) => {
                     if (!this.isDragEnabled()) {
                         return false;
@@ -428,26 +451,26 @@ const DragManager = {
                     const { dragged, related, to, from } = evt;
                     const toGroupId = to.closest('.group-view')?.dataset.group;
                     const fromGroupId = from.closest('.group-view')?.dataset.group;
-                    
+
                     // 禁止在分组视图内排序
                     if (!isAllView && toGroupId === fromGroupId) {
                         return false;
                     }
-                    
+
                     // 禁止从其他视图拖入全部视图
                     if (toGroupId === 'all' && fromGroupId !== 'all') {
                         return false;
                     }
-                    
+
                     // 计算移动方向
                     const dragRect = dragged.getBoundingClientRect();
                     const relatedRect = related.getBoundingClientRect();
                     const moveUp = dragRect.top < relatedRect.top;
-                    
+
                     // 为其他卡片添加移动动画
                     Array.from(to.children).forEach(child => {
                         if (child === dragged) return;
-                        
+
                         const childRect = child.getBoundingClientRect();
                         if (moveUp && childRect.top > dragRect.top && childRect.top < relatedRect.top) {
                             child.style.transform = 'translateY(calc(100% + 1rem))';
@@ -460,33 +483,33 @@ const DragManager = {
                             child.classList.remove('moving');
                         }
                     });
-                    
+
                     return true;
                 },
-                
+
                 onEnd: async (evt) => {
                     const { item, to, from } = evt;
                     const toGroupId = to.closest('.group-view')?.dataset.group;
                     const fromGroupId = from.closest('.group-view')?.dataset.group;
-                    
+
                     // 移除所有动画类
                     Array.from(to.children).forEach(child => {
                         child.style.transform = '';
                         child.style.transition = '';
                         child.classList.remove('moving');
                     });
-                    
+
                     // 移除拖动样式
                     item.style.opacity = '';
                     item.style.backgroundColor = '';
-                    
+
                     if (!evt.to) return;
-                    
+
                     try {
                         // 添加插入动画
                         item.classList.add('card-inserted');
                         setTimeout(() => item.classList.remove('card-inserted'), 150);
-                        
+
                         // 如果是全部视图的排序，或者是跨组拖拽
                         if ((toGroupId === 'all' && fromGroupId === 'all') || toGroupId !== fromGroupId) {
                             await this.updateCardPosition(item, toGroupId, to);
@@ -510,7 +533,7 @@ const DragManager = {
                     }
                 }
             });
-            
+
             this.sortableInstances.set(grid, sortable);
         });
     },
@@ -518,7 +541,7 @@ const DragManager = {
     async waitForTabActivation() {
         let retries = 0;
         const maxRetries = 10;
-        
+
         while (retries < maxRetries) {
             const activeTab = document.querySelector('.tab-btn.active');
             if (activeTab) {
@@ -533,7 +556,7 @@ const DragManager = {
     async waitForElements() {
         let retries = 0;
         const maxRetries = 10;
-        
+
         while (retries < maxRetries) {
             // 等待默认标签页激活
             const activeTab = document.querySelector('.tab-btn.active');
@@ -555,14 +578,14 @@ const DragManager = {
             // 获取卡片容器
             const container = activeView.querySelector('.grid');
             const cards = container?.querySelectorAll('.server-card');
-            
+
             if (container && cards.length > 0) {
                 // 检查数据是否已加载
                 const hasData = Array.from(cards).some(card => {
                     const cpu = card.querySelector('[id$="_CPU"]');
                     return cpu && cpu.textContent !== 'NaN';
                 });
-                
+
                 if (hasData) {
                     return {
                         containers: [container],
@@ -570,7 +593,7 @@ const DragManager = {
                     };
                 }
             }
-            
+
             await new Promise(resolve => setTimeout(resolve, 100));
             retries++;
             console.log(`等待页面元素加载... (${retries}/${maxRetries})`);
@@ -599,12 +622,12 @@ const DragManager = {
             tab.addEventListener('click', async () => {
                 // 等待视图切换动画完成
                 await new Promise(resolve => setTimeout(resolve, 300));
-                
+
                 // 重新初始化当前视图的拖拽功能
                 const groupId = tab.dataset.group;
                 const view = document.querySelector(`.group-view[data-group="${groupId}"]`);
                 const container = view?.querySelector('.grid');
-                
+
                 if (container) {
                     await this.initCardContainers([container]);
                 }
@@ -682,16 +705,17 @@ const DragManager = {
                 this.sortableInstances.get(grid).destroy();
                 this.sortableInstances.delete(grid);
             }
-            
+
             const groupId = grid.closest('.group-view')?.dataset.group;
             const isAllView = groupId === 'all';
-            
+
             const sortable = new Sortable(grid, {
                 ...SortableConfig.base,
                 animation: 150,
                 delay: 50,
+                disabled: !this.isDragEnabled(),
                 delayOnTouchOnly: true,
-                
+
                 // 根据不同视图设置不同的排序权限
                 sort: isAllView, // 只在全部视图允许排序
                 group: {
@@ -699,15 +723,15 @@ const DragManager = {
                     pull: !isAllView, // 分组视图允许拖出
                     put: !isAllView  // 分组视图允许放入
                 },
-                
+
                 ghostClass: "sortable-ghost",
                 chosenClass: "sortable-chosen",
                 dragClass: "sortable-drag",
-                
+
                 swapThreshold: 0.65,
                 invertSwap: true,
                 direction: 'vertical',
-                
+
                 onStart: (evt) => {
                     if (!this.isDragEnabled()) {
                         evt.preventDefault();
@@ -716,21 +740,21 @@ const DragManager = {
                     const item = evt.item;
                     const container = evt.from;
                     const fromGroupId = container.closest('.group-view')?.dataset.group;
-                    
+
                     // 记录开始拖拽的位置
                     DragState.drag = {
                         ...DragState.drag,
                         startIndex: Array.from(container.children).indexOf(item),
                         sourceGroup: fromGroupId
                     };
-                    
+
                     // 添加视觉反馈
                     requestAnimationFrame(() => {
                         item.style.opacity = '0.95';
                         item.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
                     });
                 },
-                
+
                 onMove: (evt, originalEvent) => {
                     if (!this.isDragEnabled()) {
                         return false;
@@ -738,26 +762,26 @@ const DragManager = {
                     const { dragged, related, to, from } = evt;
                     const toGroupId = to.closest('.group-view')?.dataset.group;
                     const fromGroupId = from.closest('.group-view')?.dataset.group;
-                    
+
                     // 禁止在分组视图内排序
                     if (!isAllView && toGroupId === fromGroupId) {
                         return false;
                     }
-                    
+
                     // 禁止从其他视图拖入全部视图
                     if (toGroupId === 'all' && fromGroupId !== 'all') {
                         return false;
                     }
-                    
+
                     // 计算移动方向
                     const dragRect = dragged.getBoundingClientRect();
                     const relatedRect = related.getBoundingClientRect();
                     const moveUp = dragRect.top < relatedRect.top;
-                    
+
                     // 为其他卡片添加移动动画
                     Array.from(to.children).forEach(child => {
                         if (child === dragged) return;
-                        
+
                         const childRect = child.getBoundingClientRect();
                         if (moveUp && childRect.top > dragRect.top && childRect.top < relatedRect.top) {
                             child.style.transform = 'translateY(calc(100% + 1rem))';
@@ -770,33 +794,33 @@ const DragManager = {
                             child.classList.remove('moving');
                         }
                     });
-                    
+
                     return true;
                 },
-                
+
                 onEnd: async (evt) => {
                     const { item, to, from } = evt;
                     const toGroupId = to.closest('.group-view')?.dataset.group;
                     const fromGroupId = from.closest('.group-view')?.dataset.group;
-                    
+
                     // 移除所有动画类
                     Array.from(to.children).forEach(child => {
                         child.style.transform = '';
                         child.style.transition = '';
                         child.classList.remove('moving');
                     });
-                    
+
                     // 移除拖动样式
                     item.style.opacity = '';
                     item.style.backgroundColor = '';
-                    
+
                     if (!evt.to) return;
-                    
+
                     try {
                         // 添加插入动画
                         item.classList.add('card-inserted');
                         setTimeout(() => item.classList.remove('card-inserted'), 150);
-                        
+
                         // 如果是全部视图的排序，或者是跨组拖拽
                         if ((toGroupId === 'all' && fromGroupId === 'all') || toGroupId !== fromGroupId) {
                             await this.updateCardPosition(item, toGroupId, to);
@@ -820,7 +844,7 @@ const DragManager = {
                     }
                 }
             });
-            
+
             this.sortableInstances.set(grid, sortable);
         });
     },
@@ -887,14 +911,17 @@ const DragManager = {
     },
 
     async updateCardPosition(card, groupId, container) {
+        if (window.isGuestMode) {
+            return;
+        }
         if (StateManager.state.isUpdating) {
             console.warn('状态更新中，请稍后再试');
             return;
         }
-        
+
         try {
             StateManager.setState({ isUpdating: true });
-            
+
             // 1. 如果是跨组拖拽
             const currentGroup = card.closest('.group-view')?.dataset.group;
             if (currentGroup !== groupId) {
@@ -911,26 +938,26 @@ const DragManager = {
                 }
                 await DragAPI.updateServerGroup(card.dataset.sid, groupId);
             }
-            
+
             // 2. 更新排序
             if (container) {
                 const cards = Array.from(container.querySelectorAll('.server-card'));
                 const baseOrder = Date.now();
-                
+
                 // 生成排序数据
                 const updates = cards.map((card, index) => ({
                     sid: card.dataset.sid,
                     top: baseOrder - (index * 1000), // 使用更大的间隔，便于后续插入
                     group: card.closest('.group-view')?.dataset.group
                 }));
-                
+
                 // 只更新当前分组内的排序
                 const groupUpdates = updates.filter(update => update.group === groupId);
                 if (groupUpdates.length > 0) {
                     await DragAPI.updateServerOrder(groupUpdates.map(u => u.sid));
                 }
             }
-            
+
             Utils.showToast('更新成功', 'success');
         } catch (error) {
             console.error('更新失败:', error);
@@ -944,41 +971,41 @@ const DragManager = {
     findInsertIndex(cards, draggedCard) {
         // 如果没有其他卡片，插入到末尾
         if (cards.length === 0) return 0;
-        
+
         // 获取拖拽卡片的位置
         const dragRect = draggedCard.getBoundingClientRect();
-        
+
         // 找到第一个中心点在拖拽卡片下方的卡片
         for (let i = 0; i < cards.length; i++) {
             const cardRect = cards[i].getBoundingClientRect();
             const cardCenter = cardRect.top + cardRect.height / 2;
-            
+
             if (dragRect.top < cardCenter) {
                 return i;
             }
         }
-        
+
         // 如果都在上方，插入到末尾
         return cards.length;
     },
 
     canDrag(element) {
         // 统一使用数据属性判断（修改判断逻辑）
-        return element.dataset.status === 'online' && 
-               !StateManager.state.isUpdating;
+        return element.dataset.status === 'online' &&
+            !StateManager.state.isUpdating;
     },
 
     canDrop(to, element) {
         if (!to || !element) return false;
-        
+
         // 获取目标分组
         const targetGroup = to.closest('.group-view')?.dataset.group;
         if (!targetGroup || targetGroup === 'all') return false;
-        
+
         // 检查源和目标是否相同
         const sourceGroup = element.closest('.group-view')?.dataset.group;
         if (targetGroup === sourceGroup) return false;
-        
+
         // 检查全局状态
         return !StateManager.state.isUpdating;
     },
@@ -1033,7 +1060,7 @@ const DragManager = {
 
             // 停止自动更新
             DataManager.stopAutoUpdate();
-            
+
             console.log('拖拽功能已清理');
         } catch (error) {
             console.error('清理资源失败:', error);
@@ -1053,21 +1080,20 @@ const Utils = {
     showToast(message, type = 'info') {
         if (typeof notice === 'function') {
             notice(message);
-            } else {
-    const toast = document.createElement('div');
-    toast.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
-        type === 'error' ? 'bg-red-500' : 
-        type === 'success' ? 'bg-green-500' : 
-        'bg-blue-500'
-            } text-white transition-opacity duration-300`;
-    toast.textContent = message;
-    
-    document.body.appendChild(toast);
-    setTimeout(() => {
+        } else {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${type === 'error' ? 'bg-red-500' :
+                type === 'success' ? 'bg-green-500' :
+                    'bg-blue-500'
+                } text-white transition-opacity duration-300`;
+            toast.textContent = message;
+
+            document.body.appendChild(toast);
+            setTimeout(() => {
                 toast.classList.add('opacity-0');
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
     }
 };
 
@@ -1078,57 +1104,57 @@ const PerformanceMonitor = {
         errors: [],
         lastResponseTime: null
     },
-    
+
     startMonitoring() {
         StateManager.subscribe(this.handleStateChange.bind(this));
     },
-    
+
     handleStateChange(state) {
         if (!state.isUpdating && state.lastUpdateTime) {
             this.recordUpdate(Date.now() - state.lastUpdateTime);
         }
-        
+
         if (state.updateError) {
             this.recordError(state.updateError);
         }
     },
-    
+
     recordUpdate(duration) {
         this.metrics.updateTimes.push({
             time: Date.now(),
             duration
         });
-        
+
         if (this.metrics.updateTimes.length > 100) {
             this.metrics.updateTimes.shift();
         }
-        
+
         this.analyzePerformance();
     },
-    
+
     recordError(error) {
         this.metrics.errors.push({
             time: Date.now(),
             error: error.message
         });
-        
+
         if (this.metrics.errors.length > 50) {
             this.metrics.errors.shift();
         }
     },
-    
+
     analyzePerformance() {
         const recentUpdates = this.metrics.updateTimes.slice(-10);
         if (recentUpdates.length === 0) return;
-        
+
         const avgDuration = recentUpdates.reduce((sum, record) => sum + record.duration, 0) / recentUpdates.length;
-        
+
         if (avgDuration > 1000) {
             console.warn('性能警告: 数据更新平均耗时超过1秒');
             // 可以在这里添加性能优化策略
         }
     },
-    
+
     getMetrics() {
         return {
             averageUpdateTime: this.calculateAverageUpdateTime(),
@@ -1137,13 +1163,13 @@ const PerformanceMonitor = {
             totalErrors: this.metrics.errors.length
         };
     },
-    
+
     calculateAverageUpdateTime() {
         if (this.metrics.updateTimes.length === 0) return 0;
         const sum = this.metrics.updateTimes.reduce((acc, record) => acc + record.duration, 0);
         return sum / this.metrics.updateTimes.length;
     },
-    
+
     calculateErrorRate() {
         if (this.metrics.updateTimes.length === 0) return 0;
         return this.metrics.errors.length / this.metrics.updateTimes.length;
@@ -1154,22 +1180,22 @@ const PerformanceMonitor = {
 const TabManager = {
     // 存储所有标签页的引用
     tabs: new Map(),
-    
+
     async init() {
         try {
             // 1. 初始化所有标签页
             const tabs = document.querySelectorAll('.tab-btn');
-            
+
             for (const tab of tabs) {
                 await this.initTab(tab);
             }
-            
+
             // 2. 激活默认标签页
             const defaultTab = document.querySelector('.tab-btn[data-group="all"]');
             if (defaultTab) {
                 await this.activateTab(defaultTab);
             }
-            
+
             console.log('标签页管理器初始化完成');
             return true;
         } catch (error) {
@@ -1177,7 +1203,7 @@ const TabManager = {
             throw error;
         }
     },
-    
+
     async initTab(tab) {
         try {
             // 1. 基础事件处理
@@ -1191,41 +1217,41 @@ const TabManager = {
                     await this.activateTab(tab);
                 }
             };
-            
+
             // 2. 如果是分组标签，添加拖拽处理
             if (tab.dataset.group && tab.dataset.group !== 'all') {
                 Object.assign(handlers, this.getDragHandlers(tab));
             }
-            
+
             // 3. 绑定所有事件处理器
             Object.entries(handlers).forEach(([event, handler]) => {
                 tab.addEventListener(event, handler.bind(this));
             });
-            
+
             // 4. 存储标签页引用
             this.tabs.set(tab.dataset.group, tab);
-            
+
             console.log('标签页初始化完成:', tab.dataset.group);
         } catch (error) {
             console.error('标签页初始化失败:', error);
             throw error;
         }
     },
-    
+
     async activateTab(tab) {
         try {
             // 1. 移除其他标签页的激活状态
             this.tabs.forEach(t => {
                 t.classList.remove('active', 'text-white', 'bg-slate-700/60', 'border-primary-500');
             });
-            
+
             // 2. 激活当前标签页
             tab.classList.add('active', 'text-white', 'bg-slate-700/60', 'border-primary-500');
-            
+
             // 3. 切换视图
             const groupId = tab.dataset.group;
             const views = document.querySelectorAll('.group-view');
-            
+
             views.forEach(view => {
                 if (view.dataset.group === groupId) {
                     view.classList.remove('hidden');
@@ -1245,20 +1271,20 @@ const TabManager = {
                     }, 300);
                 }
             });
-            
+
             // 4. 重新初始化当前视图的拖拽功能
             const container = document.querySelector(`.group-view[data-group="${groupId}"] .grid`);
             if (container) {
                 await DragManager.initCardContainers([container]);
             }
-            
+
             console.log('视图切换完成:', groupId);
         } catch (error) {
             console.error('视图切换失败:', error);
             Utils.showToast('视图切换失败，请刷新页面重试', 'error');
         }
     },
-    
+
     getDragHandlers(tab) {
         return {
             dragenter: (e) => {
@@ -1292,7 +1318,7 @@ const TabManager = {
                     setTimeout(() => tab.classList.remove('drop-target'), 300);
 
                     await DragManager.updateCardPosition(DragState.drag.source, tab.dataset.group);
-                    
+
                     tab.style.animation = 'success 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
                     setTimeout(() => {
                         tab.style.animation = '';
@@ -1306,7 +1332,7 @@ const TabManager = {
             }
         };
     },
-    
+
     // 清理资源
     destroy() {
         try {
@@ -1325,9 +1351,9 @@ const TabManager = {
 // 获取排序值的辅助函数
 function getSortValue(card, type) {
     let value = 0;
-    
+
     // 优先使用data属性中的值
-    switch(type) {
+    switch (type) {
         case 'default':
             return Number(card.dataset.top || 0);
         case 'cpu':
@@ -1350,10 +1376,10 @@ function applySort(type, direction = 'desc') {
     const activeGroupId = document.querySelector('.group-view:not(.hidden)')?.dataset.group;
     if (!activeGroupId) return;
 
-    const container = activeGroupId === 'all' ? 
-        document.querySelector('.group-view[data-group="all"] .grid') : 
+    const container = activeGroupId === 'all' ?
+        document.querySelector('.group-view[data-group="all"] .grid') :
         document.getElementById(`card-grid-${activeGroupId}`);
-    
+
     if (!container) return;
 
     // 保存拖拽状态
@@ -1377,7 +1403,7 @@ function applySort(type, direction = 'desc') {
         // 获取在线状态
         const isOnlineA = a.querySelector('[id$="_status_indicator"]')?.classList.contains('bg-green-500') || false;
         const isOnlineB = b.querySelector('[id$="_status_indicator"]')?.classList.contains('bg-green-500') || false;
-        
+
         // 如果在线状态不同，在线的排在前面
         if (isOnlineA !== isOnlineB) {
             return isOnlineA ? -1 : 1;
@@ -1402,7 +1428,7 @@ function applySort(type, direction = 'desc') {
     cards.forEach(card => container.appendChild(card));
 
     // 恢复拖拽状态
-    dragStates.forEach(({element, state}) => {
+    dragStates.forEach(({ element, state }) => {
         if (state.dragData) {
             element.setAttribute('draggable', state.dragData);
         }
@@ -1441,49 +1467,60 @@ document.addEventListener('DOMContentLoaded', async () => {
 // 拖拽排序开关控制
 document.addEventListener('DOMContentLoaded', () => {
     const dragSortToggle = document.getElementById('enable-drag-sort');
-    if (dragSortToggle) {
-        // 检查是否为游客
-        const isGuest = document.body.classList.contains('guest-user');
-        
+    // 检查是否为游客
+    const isGuest = document.body.classList.contains('guest-user');
+    console.log('----------->' + dragSortToggle)
+    if (dragSortToggle === null) {
+        console.log('-------------------')
         // 确保初始状态下禁用拖拽
         document.querySelectorAll('.server-card').forEach(card => {
             card.draggable = false;
         });
-        
-        if (isGuest) {
-            // 游客禁用拖拽功能
-            dragSortToggle.checked = false;
-            dragSortToggle.disabled = true;
-            dragSortToggle.title = '游客不能使用拖拽排序功能';
-            localStorage.setItem('dragSortEnabled', 'false');
-            DragManager.destroy();
-        } else {
-            // 从localStorage读取之前的状态，默认为false
-            const isDragEnabled = localStorage.getItem('dragSortEnabled') === 'true';
-            dragSortToggle.checked = isDragEnabled;
+        localStorage.setItem('dragSortEnabled', 'false');
+        DragManager.destroy();
+        return;
+    }
 
-            // 根据开关状态初始化或禁用拖拽功能
-            if (isDragEnabled) {
+    // if (dragSortToggle) {
+
+
+
+
+
+    if (isGuest) {
+        // 游客禁用拖拽功能
+        dragSortToggle.checked = false;
+        dragSortToggle.disabled = true;
+        dragSortToggle.title = '游客不能使用拖拽排序功能';
+        localStorage.setItem('dragSortEnabled', 'false');
+        DragManager.destroy();
+    } else {
+        // 从localStorage读取之前的状态，默认为false
+        const isDragEnabled = localStorage.getItem('dragSortEnabled') === 'true';
+        dragSortToggle.checked = isDragEnabled;
+
+        // 根据开关状态初始化或禁用拖拽功能
+        if (isDragEnabled) {
+            DragManager.init();
+        } else {
+            DragManager.destroy();
+        }
+
+        // 监听开关变化
+        dragSortToggle.addEventListener('change', (e) => {
+            const enabled = e.target.checked;
+            localStorage.setItem('dragSortEnabled', enabled);
+
+            if (enabled) {
                 DragManager.init();
+                notice('已启用拖拽排序功能');
             } else {
                 DragManager.destroy();
+                notice('已禁用拖拽排序功能');
             }
-
-            // 监听开关变化
-            dragSortToggle.addEventListener('change', (e) => {
-                const enabled = e.target.checked;
-                localStorage.setItem('dragSortEnabled', enabled);
-                
-                if (enabled) {
-                    DragManager.init();
-                    notice('已启用拖拽排序功能');
-                } else {
-                    DragManager.destroy();
-                    notice('已禁用拖拽排序功能');
-                }
-            });
-        }
+        });
     }
+    // }
 });
 
 // 导出接口

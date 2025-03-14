@@ -46,6 +46,9 @@ function getStatsData(isAdmin = false, shouldFilter = true) {
                             delta: { in: 0, out: 0 },
                             total: { in: 0, out: 0 }
                         },
+                        disk: {},
+                        disk_read_rate: 0,
+                        disk_write_rate: 0, 
                         offline: isOffline
                     }
                 };
@@ -82,7 +85,10 @@ function getStatsData(isAdmin = false, shouldFilter = true) {
                                 in: Math.max(0, Number(node.stat.net?.total?.in) || 0),
                                 out: Math.max(0, Number(node.stat.net?.total?.out) || 0)
                             }
-                        }
+                        },
+                        disk: node.stat.disk || {},
+                        disk_read_rate: node.stat.disk_read_rate || 0,
+                        disk_write_rate: node.stat.disk_write_rate || 0,
                     }
                 };
             }
@@ -97,7 +103,8 @@ function getStatsData(isAdmin = false, shouldFilter = true) {
                     cpu: sampleNode.stat.cpu?.multi,
                     mem: sampleNode.stat.mem?.virtual?.usedPercent,
                     net_in: sampleNode.stat.net?.delta?.in,
-                    net_out: sampleNode.stat.net?.delta?.out
+                    net_out: sampleNode.stat.net?.delta?.out,
+                    disk: sampleNode.stat.disk 
                 } : '不存在'
             });
         }
@@ -134,7 +141,10 @@ function getStats(isAdmin=false){
                 traffic_calibration_date: server.traffic_calibration_date || 0,
                 traffic_calibration_value: server.traffic_calibration_value || 0,
                 calibration_base_traffic: serverStats?.calibration_base_traffic || null,
-                data: server.data
+                data: server.data,
+                disk: serverStats?.stat?.disk || {},
+                disk_read_rate: serverStats?.stat?.disk_read_rate || 0,
+                disk_write_rate: serverStats?.stat?.disk_write_rate || 0
             };
         }
     }
@@ -283,7 +293,7 @@ async function getStat(server){
 class IPLocationService {
     constructor(options = {}) {
         this.config = {
-            apiKey: options.apiKey || '71AF4B54EB6E5F2EDEFDB3ECEE0BE158',
+            // apiKey: options.apiKey || '71AF4B54EB6E5F2EDEFDB3ECEE0BE158',
             updateInterval: options.updateInterval || 7 * 24 * 60 * 60 * 1000, // 7天更新间隔
             hourlyLimit: options.hourlyLimit || 450,  // 每小时请求限制
             minDelay: options.minDelay || 5000,     // 最小延迟
@@ -464,11 +474,7 @@ class IPLocationService {
             location: {
                 country: {
                     code: 'LO',
-                    name: 'Local',
-                    name_zh: '本地网络',
-                    flag: '🏠',
-                    continent: 'LO',
-                    region: 'Local',
+                    flag_url:'https://ipdata.co/flags/de.png',
                     updated_at: Date.now()
                 }
             }
@@ -506,7 +512,7 @@ class IPLocationService {
      * 获取位置信息
      */
     async _fetchLocationInfo(ip, retryCount = 0) {
-        const url = `https://api.ip2location.io/?key=${this.config.apiKey}&ip=${ip}`;
+        const url = `https://vps8.de/api.php?ip=${ip}`;
 
         try {
             const response = await fetch(url, {
@@ -528,11 +534,7 @@ class IPLocationService {
             return {
                 country: {
                     code: data.country_code,
-                    name: data.country_name,
-                    name_zh: data.country_name, // 目前使用英文名称，后续可以添加中文名称映射
-                    continent: data.region_name,
-                    region: data.city_name,
-                    flag: this._generateCountryFlag(data.country_code),
+                    flag_url: data.flag_url,
                     updated_at: Date.now()
                 }
             };
@@ -761,7 +763,7 @@ setInterval(calc,30*1000);
 
 schedule.scheduleJob({second:0},()=>{
     for(let {sid} of db.servers.all()){
-        let cpu=-1,mem=-1,swap=-1,ibw=-1,obw=-1;
+        let cpu=-1,mem=-1,swap=-1,ibw=-1,obw=-1,iow=-1,ior=-1;
         let stat=stats[sid];
         if(stat&&stat.stat&&stat.stat!=-1){
             cpu=stat.stat.cpu.multi*100;
@@ -769,20 +771,31 @@ schedule.scheduleJob({second:0},()=>{
             swap=stat.stat.mem.swap.usedPercent;
             ibw=stat.stat.net.delta.in;
             obw=stat.stat.net.delta.out;
+
+            let totalRead = 0;
+            let totalWrite = 0;
+            for (const mount in stat.stat.disk.devices) {
+                const dev = stat.stat.disk.devices[mount];
+                if (dev.read_rate) totalRead += dev.read_rate;
+                if (dev.write_rate) totalWrite += dev.write_rate;
+            }
+            iow=totalWrite;
+            ior=totalRead;
+
         }
-        db.load_m.shift(sid,{cpu,mem,swap,ibw,obw});
+        db.load_m.shift(sid,{cpu,mem,swap,ibw,obw,iow,ior});
     }
 });
 schedule.scheduleJob({minute:0,second:1},()=>{
     db.traffic.shift_hs();
     for(let {sid} of db.servers.all()){
-        let Cpu=0,Mem=0,Swap=0,Ibw=0,Obw=0,tot=0;
-        for(let {cpu,mem,swap,ibw,obw} of db.load_m.select(sid))if(cpu!=-1){
+        let Cpu=0,Mem=0,Swap=0,Ibw=0,Obw=0,Iow=0,Ior=0,tot=0;
+        for(let {cpu,mem,swap,ibw,obw,iow,ior} of db.load_m.select(sid))if(cpu!=-1){
             ++tot;
-            Cpu+=cpu,Mem+=mem,Swap+=swap,Ibw+=ibw,Obw+=obw;
+            Cpu+=cpu,Mem+=mem,Swap+=swap,Ibw+=ibw,Obw+=obw,Iow+=iow,Ior+=ior;
         }
-        if(tot==0)db.load_h.shift(sid,{cpu:-1,mem:-1,swap:-1,ibw:-1,obw:-1});
-        else db.load_h.shift(sid,{cpu:Cpu/tot,mem:Mem/tot,swap:Swap/tot,ibw:Ibw/tot,obw:Obw/tot});
+        if(tot==0)db.load_h.shift(sid,{cpu:-1,mem:-1,swap:-1,ibw:-1,obw:-1,iow:-1,ior:-1});
+        else db.load_h.shift(sid,{cpu:Cpu/tot,mem:Mem/tot,swap:Swap/tot,ibw:Ibw/tot,obw:Obw/tot,iow:Iow/tot,ior:Ior/tot});
     }
 });
 schedule.scheduleJob({hour:4,minute:0,second:2},()=>{db.traffic.shift_ds();});

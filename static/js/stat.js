@@ -1,3 +1,4 @@
+
 /**
  * 系统信息处理模块
  * 用于处理和显示服务器的基本系统信息
@@ -10,6 +11,34 @@ function formatSystemSize(bytes) {
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(Math.abs(bytes)) / Math.log(k));
     return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
+}
+
+/**
+ * 将字节/秒速率转成可读形式:
+ * - < 1 MB => xxx KB/s
+ * - < 1 GB => xxx MB/s
+ * - >= 1 GB => xxx GB/s
+ * 
+ * @param {number} bps - 字节每秒(B/s)
+ * @returns {string} 格式化后的速率字符串
+ */
+function strByteRate(bps) {
+    if (!bps || bps < 0) bps = 0;
+
+    const KB = 1024;
+    const MB = 1024 * 1024;
+    const GB = 1024 * 1024 * 1024;
+
+    if (bps < MB) {
+        // 显示 KB/s (保留2位小数)
+        return (bps / KB).toFixed(2) + ' KB/s';
+    } else if (bps < GB) {
+        // 显示 MB/s
+        return (bps / MB).toFixed(2) + ' MB/s';
+    } else {
+        // 显示 GB/s
+        return (bps / GB).toFixed(2) + ' GB/s';
+    }
 }
 
 /**
@@ -66,13 +95,11 @@ function strB(b){
     else return (b/TB).toFixed(2)+'TB';
 }
 var Kbps=128,Mbps=Kbps*1000,Gbps=Mbps*1000,Tbps=Gbps*1000;
-function strbps(b){
-    if(b<Kbps)return b.toFixed(2)+'bps';
-    if(b<Mbps)return (b/Kbps).toFixed(2)+'Kbps';
-    if(b<Gbps)return (b/Mbps).toFixed(2)+'Mbps';
-    if(b<Tbps)return (b/Gbps).toFixed(2)+'Gbps';
-    else return (b/Tbps).toFixed(2)+'Tbps';
-}
+
+
+
+
+
 
 // 使用原生 title 属性来显示提示信息
 function updateTooltip(elementId, content) {
@@ -173,7 +200,8 @@ function validateSystemData(data, nodeId) {
         cpu: node.stat.cpu,
         mem: node.stat.mem,
         net: node.stat.net,
-        host: node.stat.host
+        host: node.stat.host,
+        disk: node.stat.disk
     };
 }
 
@@ -222,6 +250,38 @@ function updateMemInfo(mem) {
 }
 
 /**
+ * 更新磁盘信息
+ * @param {Object} disk - 磁盘数据
+ */
+function updateDiskInfo(disk) {
+    if (!disk) return;  // 容错
+    console.log(disk.read_rate)
+    console.log(disk.write_rate)
+
+    // 取出磁盘的关键字段
+    const used = disk.used || 0;
+    const total = disk.total || 1;  
+    const percent = disk.percent || 0; // 用于进度条
+    const mountpoint = disk.mountpoint || '-';
+    const readRate = disk.read_rate || 0;
+    const writeRate = disk.write_rate || 0;
+
+    // 百分比
+    updateText('DISK_percent', percent.toFixed(2) + '%');
+    // 进度条
+    updateProgress('DISK_progress', percent);
+
+    // 用量显示
+    updateText('DISK_used', strB(used));
+    updateText('DISK_total', strB(total));
+    updateText('DISK_mountpoint', mountpoint);
+
+    // 读写速率
+    updateText('DISK_read_rate', strByteRate(readRate));
+    updateText('DISK_write_rate', strByteRate(writeRate));
+}
+
+/**
  * 更新网络信息
  * @param {Object} net - 网络数据
  */
@@ -230,8 +290,8 @@ function updateNetInfo(net) {
     
     // 更新总体网络统计
     if (net.delta) {
-        updateText('NET_IN', strbps(net.delta.in || 0));
-        updateText('NET_OUT', strbps(net.delta.out || 0));
+        updateText('NET_IN', strByteRate(net.delta.in || 0));
+        updateText('NET_OUT', strByteRate(net.delta.out || 0));
     }
     
     if (net.total) {
@@ -243,8 +303,8 @@ function updateNetInfo(net) {
     if (net.devices) {
         for (const [device, Net] of Object.entries(net.devices)) {
             if (Net.delta) {
-                updateText(`net_${device}_delta_in`, strbps(Net.delta.in || 0));
-                updateText(`net_${device}_delta_out`, strbps(Net.delta.out || 0));
+                updateText(`net_${device}_delta_in`, strByteRate(Net.delta.in || 0));
+                updateText(`net_${device}_delta_out`, strByteRate(Net.delta.out || 0));
             }
             if (Net.total) {
                 updateText(`net_${device}_total_in`, strB(Net.total.in || 0));
@@ -291,7 +351,8 @@ function updateSystemComponents(data) {
         { name: 'cpu', updater: updateCPUInfo },
         { name: 'mem', updater: updateMemInfo },
         { name: 'net', updater: updateNetInfo },
-        { name: 'host', updater: updateHostInfo }
+        { name: 'host', updater: updateHostInfo },
+        // { name: 'disk', updater: updateDiskInfo }
     ];
 
     components.forEach(({ name, updater }) => {
@@ -303,6 +364,11 @@ function updateSystemComponents(data) {
             }
         }
     });
+        // === 在此处专门处理“多分区”表格 ===
+        if (data.disk) {
+            // 调用我们的新函数来填充表格
+            updateDiskTable(data.disk);
+        }
 }
 
 async function get(){
@@ -417,6 +483,63 @@ function updateTrafficUI() {
     }
 }
 
+/**
+ * 填充磁盘设备表格
+ * @param {Object} diskObj - 其中包含 { devices: { mountPoint1: {...}, mountPoint2: {...}, ...} }
+ */
+function updateDiskTable(diskObj) {
+    // 如果没有有效的 diskObj 或没有 devices 字段，直接返回
+    if (!diskObj || !diskObj.devices) return;
+
+    // 1. 获取表格的 <tbody> 元素
+    const tbody = document.getElementById('disk-devices-tbody');
+    if (!tbody) return;
+
+    // 2. 先清空旧内容
+    tbody.innerHTML = '';
+
+    // 3. 遍历所有分区
+    for (const mountpoint in diskObj.devices) {
+        if (!Object.prototype.hasOwnProperty.call(diskObj.devices, mountpoint)) continue;
+        const partition = diskObj.devices[mountpoint];
+        // partition 里包含:
+        // {
+        //   device: "/dev/sda2",
+        //   mountpoint: "/",
+        //   total: 65778880512,
+        //   used: 7388446720,
+        //   usedPercent: 11.839652787883072,
+        //   read_rate: 0,
+        //   write_rate: 0,
+        //   ...
+        // }
+
+        // 4. 创建表格行
+        const tr = document.createElement('tr');
+        tr.classList.add('hover:bg-white/5');
+
+        // 5. 计算或格式化要显示的字段
+        const totalStr = strB(partition.total || 0);
+        const usedStr = strB(partition.used || 0);
+        const percentStr = (partition.usedPercent || 0).toFixed(2) + '%';
+        const readRateStr = strByteRate(partition.read_rate || 0);
+        const writeRateStr = strByteRate(partition.write_rate || 0);
+
+        // 6. 拼出行的 HTML
+        tr.innerHTML = `
+            <td class="px-6 py-3 text-sm text-gray-200">${mountpoint}</td>
+            <td class="px-6 py-3 text-sm text-gray-200">${totalStr}</td>
+            <td class="px-6 py-3 text-sm text-gray-200">${usedStr}</td>
+            <td class="px-6 py-3 text-sm text-gray-200">${percentStr}</td>
+            <td class="px-6 py-3 text-sm text-gray-200">${readRateStr}</td>
+            <td class="px-6 py-3 text-sm text-gray-200">${writeRateStr}</td>
+        `;
+
+        // 7. 插入到 <tbody> 中
+        tbody.appendChild(tr);
+    }
+}
+
 // 初始化流量数据
 document.addEventListener('DOMContentLoaded', () => {
     try {
@@ -446,45 +569,46 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// 初始化
-let updateInterval;
-let retryCount = 0;
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 2000;
+// // 初始化
+// let updateInterval;
+// let retryCount = 0;
+// const MAX_RETRIES = 3;
+// const RETRY_DELAY = 2000;
 
-function startUpdating() {
-    get().catch(error => {
-        console.error('Initial fetch failed:', error);
-        if (retryCount < MAX_RETRIES) {
-            retryCount++;
-            console.log(`Retrying in ${RETRY_DELAY/1000} seconds... (Attempt ${retryCount}/${MAX_RETRIES})`);
-            setTimeout(startUpdating, RETRY_DELAY);
-        }
-    });
-    updateInterval = setInterval(get, 1000);
-}
+// function startUpdating() {
+//     get().catch(error => {
+//         console.error('Initial fetch failed:', error);
+//         if (retryCount < MAX_RETRIES) {
+//             retryCount++;
+//             console.log(`Retrying in ${RETRY_DELAY/1000} seconds... (Attempt ${retryCount}/${MAX_RETRIES})`);
+//             setTimeout(startUpdating, RETRY_DELAY);
+//         }
+//     });
+//     updateInterval = setInterval(get, 1000);
+// }
 
-function stopUpdating() {
-    if (updateInterval) {
-        clearInterval(updateInterval);
-        updateInterval = null;
-    }
-    retryCount = 0;
-}
+// function stopUpdating() {
+//     if (updateInterval) {
+//         clearInterval(updateInterval);
+//         updateInterval = null;
+//     }
+//     retryCount = 0;
+// }
 
-// 当页面可见性改变时处理更新
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-        stopUpdating();
-    } else {
-        startUpdating();
-    }
-});
+// // 当页面可见性改变时处理更新
+// document.addEventListener('visibilitychange', () => {
+//     if (document.hidden) {
+//         stopUpdating();
+//     } else {
+//         startUpdating();
+//     }
+// });
 
-// 页面加载完成后开始更新
-document.addEventListener('DOMContentLoaded', () => {
-    startUpdating();
+// // 页面加载完成后开始更新
+// document.addEventListener('DOMContentLoaded', () => {
+//     startUpdating();
     
-    // 初始更新流量统计
-    updateTrafficStats();
-});
+//     // 初始更新流量统计
+//     updateTrafficStats();
+// });
+

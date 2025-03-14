@@ -1,7 +1,17 @@
-const ssh=require("../../ssh");
-async function initServer(server,neko_status_url){
-    var sh=
-`wget --version||yum install wget -y||apt-get install wget -y
+const ssh = require("../../ssh");
+const { decrypt } = require('./cryptoUtil');
+async function initServer(server, neko_status_url) {
+    // 解密密码
+    if (server.data && server.data.ssh && server.data.ssh.password) {
+        try {
+            server.data.ssh.password = decrypt(server.data.ssh.password);
+        } catch (err) {
+            console.error('解密SSH密码失败:', err);
+            server.data.ssh.password = '';
+        }
+    }
+    var sh =
+        `wget --version||yum install wget -y||apt-get install wget -y
 /usr/bin/neko-status -v||(wget ${neko_status_url} -O /usr/bin/neko-status && chmod +x /usr/bin/neko-status)
 systemctl stop nekonekostatus
 mkdir /etc/neko-status/
@@ -22,18 +32,27 @@ WantedBy=multi-user.target" > /etc/systemd/system/nekonekostatus.service
 systemctl daemon-reload
 systemctl start nekonekostatus
 systemctl enable nekonekostatus`
-    var res=await ssh.Exec(server.data.ssh,sh);
-    if(res.success)return {status:1,data:"安装成功"};
-    else return {status:0,data:"安装失败/SSH连接失败"};
+    var res = await ssh.Exec(server.data.ssh, sh);
+    if (res.success) return { status: 1, data: "安装成功" };
+    else return { status: 0, data: "安装失败/SSH连接失败" };
 }
-async function updateServer(server,neko_status_url){
-    var sh=
-`rm -f /usr/bin/neko-status
+async function updateServer(server, neko_status_url) {
+    // 解密密码
+    if (server.data && server.data.ssh && server.data.ssh.password) {
+        try {
+            server.data.ssh.password = decrypt(server.data.ssh.password);
+        } catch (err) {
+            console.error('解密SSH密码失败:', err);
+            server.data.ssh.password = '';
+        }
+    }
+    var sh =
+        `rm -f /usr/bin/neko-status
 wget ${neko_status_url} -O /usr/bin/neko-status
 chmod +x /usr/bin/neko-status`
-    await ssh.Exec(server.data.ssh,sh);
-    return {status:1,data:"更新成功"};
+    await ssh.Exec(server.data.ssh, sh);
+    return { status: 1, data: "更新成功" };
 }
-module.exports={
-    initServer,updateServer,
+module.exports = {
+    initServer, updateServer,
 }
