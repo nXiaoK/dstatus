@@ -178,7 +178,7 @@
                     <div class="flex border-t border-gray-700/50">
                         <a href="/stats/{{sid}}"
                             class="flex-1 px-4 py-3 text-center text-sm text-gray-400 hover:text-gray-200 hover:bg-white/5 transition-colors">
-                            详细信息1
+                            详细信息
                         </a>
                     </div>
                 </div>
@@ -208,19 +208,20 @@
 
                                 <div class="flex items-center gap-2">
 
-                                    {% if node.data.location and node.data.location.country and node.data.location.country.flag_url %}
-    <!-- 如果flag_url存在且不为空，用<img>显示国旗 -->
-    <img class="country-flag text-xl h-5 inline-block"
-         src="{{ node.data.location.country.flag_url }}"
-         alt="{{ node.data.location.country.code }}"
-         title="{{ node.data.location.country.code }}" />
-{% else %}
-    <!-- 否则使用“🌐”做占位符 -->
-    <span class="country-flag text-xl"
-          title="{{ node.data.location.country.code if node.data.location and node.data.location.country else '' }}">
-          🌐
-    </span>
-{% endif %}
+                                    {% if node.data.location and node.data.location.country and
+                                    node.data.location.country.flag_url %}
+                                    <!-- 如果flag_url存在且不为空，用<img>显示国旗 -->
+                                    <img class="country-flag text-xl h-5 inline-block"
+                                        src="{{ node.data.location.country.flag_url }}"
+                                        alt="{{ node.data.location.country.code }}"
+                                        title="{{ node.data.location.country.code }}" />
+                                    {% else %}
+                                    <!-- 否则使用“🌐”做占位符 -->
+                                    <span class="country-flag text-xl"
+                                        title="{{ node.data.location.country.code if node.data.location and node.data.location.country else '' }}">
+                                        🌐
+                                    </span>
+                                    {% endif %}
 
 
                                     <a href="/stats/{{sid}}/" class="hover:text-primary-400">{{node.name}}</a>
@@ -336,7 +337,7 @@
                     <div class="flex border-t border-gray-700/50">
                         <a href="/stats/{{sid}}"
                             class="flex-1 px-4 py-3 text-center text-sm text-gray-400 hover:text-gray-200 hover:bg-white/5 transition-colors">
-                            详细信息2
+                            详细信息
                         </a>
                     </div>
                 </div>

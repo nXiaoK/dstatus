@@ -1,4 +1,5 @@
 var G = 1024 * 1024 * 1024; // 1GB in bytes
+var T = 1024 * 1024 * 1024 * 1024; // 1TB in bytes
 
 // 安全的数据解析
 function safeParseTrafficData() {
@@ -6,12 +7,12 @@ function safeParseTrafficData() {
         const element = document.getElementById('traffic_data');
         if (!element || !element.value) {
             console.warn('Traffic data element not found or empty');
-            return {hs: [], ds: [], ms: []};
+            return { hs: [], ds: [], ms: [] };
         }
         return JSON.parse(element.value);
     } catch (e) {
         console.error('Error parsing traffic data:', e);
-        return {hs: [], ds: [], ms: []};
+        return { hs: [], ds: [], ms: [] };
     }
 }
 
@@ -105,9 +106,9 @@ var dsLabels = generateTimeLabels(31, 'MM-dd', 'day');
 var msLabels = generateTimeLabels(12, 'yyyy-MM', 'month');
 
 // 更新总流量显示
-document.getElementById('hs_tot').innerText = `24h: ${(hs_tot/G).toFixed(2)}GB`;
-document.getElementById('ds_tot').innerText = `31d: ${(ds_tot/G).toFixed(2)}GB`;
-document.getElementById('ms_tot').innerText = `12m: ${(ms_tot/G).toFixed(2)}GB`;
+document.getElementById('hs_tot').innerText = `24h: ${(hs_tot >= T ? hs_tot / T : hs_tot / G).toFixed(2)}${hs_tot >= T ? 'TB' : 'GB'}`;
+document.getElementById('ds_tot').innerText = `31d: ${(ds_tot >= T ? ds_tot / T : ds_tot / G).toFixed(2)}${ds_tot >= T ? 'TB' : 'GB'}`;
+document.getElementById('ms_tot').innerText = `12m: ${(ms_tot >= T ? ms_tot / T : ms_tot / G).toFixed(2)}${ms_tot >= T ? 'TB' : 'GB'}`;
 
 // 图表配置
 const trafficChartConfig = (labels, inData, outData, title = '') => ({
@@ -167,7 +168,7 @@ const trafficChartConfig = (labels, inData, outData, title = '') => ({
             style: {
                 colors: '#94a3b8'
             },
-            formatter: function(value, timestamp, index) {
+            formatter: function (value, timestamp, index) {
                 if (typeof index !== 'number') return value;
                 let interval;
                 if (labels.length <= 12) {  // 月度数据
@@ -233,18 +234,18 @@ const trafficChartConfig = (labels, inData, outData, title = '') => ({
 document.addEventListener('DOMContentLoaded', () => {
     // 1. 初始化图表实例
     const hsChart = new ApexCharts(
-        document.querySelector("#hs"), 
+        document.querySelector("#hs"),
         trafficChartConfig(hsLabels, hsData.in, hsData.out, '过去24小时流量统计')
     );
     const dsChart = new ApexCharts(
-        document.querySelector("#ds"), 
+        document.querySelector("#ds"),
         trafficChartConfig(dsLabels, dsData.in, dsData.out, '过去31天流量统计')
     );
     const msChart = new ApexCharts(
-        document.querySelector("#ms"), 
+        document.querySelector("#ms"),
         trafficChartConfig(msLabels, msData.in, msData.out, '过去12个月流量统计')
     );
-    
+
     // 2. 设置初始状态
     const trafficPanel = document.querySelector('.bg-white\\/5:has([data-tab="traffic-hs"])');
     if (trafficPanel) {
@@ -252,13 +253,13 @@ document.addEventListener('DOMContentLoaded', () => {
         trafficPanel.querySelectorAll('.tab-content').forEach(content => {
             content.classList.add('hidden');
         });
-        
+
         // 显示24小时内容
         const hourlyContent = trafficPanel.querySelector('#traffic-hs');
         if (hourlyContent) {
             hourlyContent.classList.remove('hidden');
         }
-        
+
         // 设置标签状态
         trafficPanel.querySelectorAll('.tab-button').forEach(tab => {
             const isHourly = tab.dataset.tab === 'traffic-hs';
@@ -266,7 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tab.classList.toggle('text-white', isHourly);
         });
     }
-    
+
     // 3. 渲染图表
     hsChart.render();
     dsChart.render();

@@ -247,15 +247,15 @@ function formatUptime(uptimeSec) {
     const days = Math.floor(uptimeSec / 86400);
     const hours = Math.floor((uptimeSec % 86400) / 3600);
     const mins = Math.floor((uptimeSec % 3600) / 60);
-  
+
     let result = '';
     if (days > 0) result += days + '天';
     if (hours > 0) result += hours + '小时';
     if (days === 0 && hours === 0) {
-      result += mins + '分';
+        result += mins + '分';
     }
     return result || '0分';
-  }
+}
 
 // 使用原生 JavaScript 获取元素
 function E(id) {
@@ -812,16 +812,23 @@ function updateTotalStats(totals) {
 
         // 9. 更新地区统计
         if (elements.regionStats) {
-            elements.regionStats.innerHTML = topRegions.map(region => `
-                
-                <div class="w-[65px] flex items-center justify-between bg-slate-800 rounded-full px-2 py-1">
-                    <div class="flex items-center min-w-0">
-                        <span class="text-sm mr-1">${region.flag}</span>
-                        <span class="text-xs font-medium">${region.code}</span>
-                        <span class="text-xs font-bold ml-1">${region.count}</span>
-                    </div>
+            elements.regionStats.innerHTML = topRegions.map(region => {
+                // 如果 flag_url 存在且非空，就用<img>显示，否则用🏠
+                const flagContent = region.flag_url
+                    ? `<img src="${region.flag_url}" alt="${region.code}" class="w-4 h-4 mr-1" 
+                   onerror="this.onerror=null;this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22></svg>';"/>`
+                    : '🌐';
+
+                return `
+            <div class="w-[65px] flex items-center justify-between bg-slate-800 rounded-full px-2 py-1">
+                <div class="flex items-center min-w-0">
+                    <span class="text-sm mr-1">${flagContent}</span>
+                    <span class="text-xs font-medium">${region.code}</span>
+                    <span class="text-xs font-bold ml-1">${region.count}</span>
                 </div>
-            `).join('');
+            </div>
+        `;
+            }).join('');
         }
         if (mobileElements.regionStats) {
             mobileElements.regionStats.innerHTML = topRegions.map(region => `

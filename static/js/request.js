@@ -1,6 +1,5 @@
+let lastChartUpdate = 0;
 document.addEventListener('DOMContentLoaded', () => {
-    let skipUpdate = false;
-    // 假设每2秒请求一次
     let timer = setInterval(async () => {
         try {
             const response = await fetch('/stats/data');
@@ -19,9 +18,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // 2) 每次只在 skipUpdate==false 时更新 load.js
-            if (!skipUpdate) {
-                updateCharts(data); // from load.js
+            // 只有距离上次图表更新 >= 2 秒才更新图表
+            const now = Date.now();
+            if (now - lastChartUpdate >= 2000) {
+                updateCharts(data);
+                lastChartUpdate = now;
             }
 
             skipUpdate = !skipUpdate; // 下次反转
@@ -55,8 +56,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         }
 
-                        // 2) 更新 load.js
-                        updateCharts(data);
+                        // 只有距离上次图表更新 >= 2 秒才更新图表
+                        const now = Date.now();
+                        if (now - lastChartUpdate >= 2000) {
+                            updateCharts(data);
+                            lastChartUpdate = now;
+                        }
                     } catch (err) {
                         console.error('Global fetch error:', err);
                         clearAllData();

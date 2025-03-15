@@ -116,6 +116,16 @@ module.exports = svr => {
     });
     svr.get("/admin/servers/:sid", (req, res) => {
         var { sid } = req.params, server = db.servers.get(sid);
+        // 关键：在渲染模板前尝试“解密” password
+        if (server && server.data && server.data.ssh && server.data.ssh.password) {
+            try {
+                server.data.ssh.password = decrypt(server.data.ssh.password);
+            } catch (err) {
+                console.error('解密SSH密码失败:', err);
+                server.data.ssh.password = '';  // 解密失败则置空
+            }
+        }
+
         res.render(`admin/servers/edit`, {
             server,
         });
