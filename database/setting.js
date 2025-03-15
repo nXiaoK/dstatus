@@ -25,7 +25,7 @@ init("site",{
     name:"DStatus",
     url:"https://www.google.com",
 });
-init("neko_status_url","https://github.com/nkeonkeo/nekonekostatus/releases/download/v0.1/neko-status");
+init("neko_status_url","https://github.com/nXiaoK/dstatus/releases/download/v1.0/neko-status");
 init("debug",0);
 return {setting};
 }

@@ -67,10 +67,10 @@ module.exports = (DB) => {
                     // 复制数据
                     DB.prepare(`
                         INSERT INTO ${table}_new (
-                            sid, cpu, mem, swap, ibw, obw,iow,ior, expire_time, created_at
+                            sid, cpu, mem, swap, ibw, obw, iow, ior, expire_time, created_at
                         )
                         SELECT 
-                            sid, cpu, mem, swap, ibw, obw,,iow,ior, expire_time, 
+                            sid, cpu, mem, swap, ibw, obw,iow,ior, expire_time, 
                             strftime('%s', 'now')
                         FROM ${table}
                     `).run();
