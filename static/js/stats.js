@@ -139,10 +139,10 @@ function initWebSocket() {
                 });
 
                 // 4.7 如果启用了实时排序，重新应用排序
-                const realtimeSortCheckbox = document.getElementById('realtime-sort');
-                if (realtimeSortCheckbox?.checked && window.currentSortConfig) {
-                    applySort(window.currentSortConfig.type, window.currentSortConfig.direction);
-                }
+                // const realtimeSortCheckbox = document.getElementById('realtime-sort');
+                // if (realtimeSortCheckbox?.checked && window.currentSortConfig) {
+                //     applySort(window.currentSortConfig.type, window.currentSortConfig.direction);
+                // }
 
                 // 在数据更新完成后触发同步事件（新增）
                 setTimeout(() => {
@@ -211,6 +211,10 @@ function strB(bytes) {
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
+}
+
+function strBs(bytes) {
+    return strB(bytes)+'/s';
 }
 
 const Kbps = 1000, Mbps = Kbps * 1000, Gbps = Mbps * 1000, Tbps = Gbps * 1000;
@@ -442,10 +446,10 @@ function updateNodeStats(stats) {
         });
 
         // 3. 如果启用了实时排序，重新应用排序
-        const realtimeSortCheckbox = document.getElementById('realtime-sort');
-        if (realtimeSortCheckbox?.checked && window.currentSortConfig) {
-            applySort(window.currentSortConfig.type, window.currentSortConfig.direction);
-        }
+        // const realtimeSortCheckbox = document.getElementById('realtime-sort');
+        // if (realtimeSortCheckbox?.checked && window.currentSortConfig) {
+        //     applySort(window.currentSortConfig.type, window.currentSortConfig.direction);
+        // }
 
     } catch (error) {
         console.error('更新节点统计信息时出错:', error);
@@ -513,14 +517,14 @@ function updateNodeDisplay(sid, node) {
                     // 更新下载速度显示
                     const netInElements = card.querySelectorAll(`[id$="_NET_IN"]`);
                     netInElements.forEach(el => {
-                        el.textContent = strB(node.stat.net.delta.in);
+                        el.textContent = strBs(node.stat.net.delta.in);
                         el.dataset.download = node.stat.net.delta.in;
                     });
 
                     // 更新上传速度显示
                     const netOutElements = card.querySelectorAll(`[id$="_NET_OUT"]`);
                     netOutElements.forEach(el => {
-                        el.textContent = strB(node.stat.net.delta.out);
+                        el.textContent = strBs(node.stat.net.delta.out);
                         el.dataset.upload = node.stat.net.delta.out;
                     });
                 }
@@ -632,10 +636,10 @@ function updateNodeNetworkDisplay(sid, netStats) {
     };
 
     if (elements.netIn) {
-        elements.netIn.textContent = strB(netStats.delta.in);
+        elements.netIn.textContent = strBs(netStats.delta.in);
     }
     if (elements.netOut) {
-        elements.netOut.textContent = strB(netStats.delta.out);
+        elements.netOut.textContent = strBs(netStats.delta.out);
     }
     if (elements.netInTotal) {
         elements.netInTotal.textContent = strB(netStats.total.in);
@@ -766,8 +770,8 @@ function updateTotalStats(totals) {
             }
             if (els.onlineNodes) els.onlineNodes.textContent = stats.online;
             if (els.offlineNodes) els.offlineNodes.textContent = stats.offline;
-            if (els.currentNetIn) els.currentNetIn.textContent = strB(stats.download);
-            if (els.currentNetOut) els.currentNetOut.textContent = strB(stats.upload);
+            if (els.currentNetIn) els.currentNetIn.textContent = strBs(stats.download);
+            if (els.currentNetOut) els.currentNetOut.textContent = strBs(stats.upload);
             if (els.totalNetIn) els.totalNetIn.textContent = strB(stats.downloadTotal);
             if (els.totalNetOut) els.totalNetOut.textContent = strB(stats.uploadTotal);
         });
@@ -830,15 +834,23 @@ function updateTotalStats(totals) {
             }).join('');
         }
         if (mobileElements.regionStats) {
-            mobileElements.regionStats.innerHTML = topRegions.map(region => `
-                <div class="flex items-center justify-between bg-white/5 rounded px-0.5 py-0.5">
-                    <div class="flex items-center gap-0.5 min-w-0">
-                        <span class="text-xs">${region.flag}</span>
-                        <span class="text-[10px] text-gray-200">${region.code}</span>
+            mobileElements.regionStats.innerHTML = topRegions.map(region =>{
+                            const flagContent = region.flag_url
+                            ? `<img src="${region.flag_url}" alt="${region.code}" class="w-4 h-4 mr-1" 
+                           onerror="this.onerror=null;this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22></svg>';"/>`
+                            : '🌐';
+        
+                        return `
+                    <div class="flex items-center justify-between bg-white/5 rounded px-0.5 py-0.5">
+                        <div class="flex items-center gap-0.5 min-w-0">
+                            <span class="text-xs">${flagContent}</span>
+                            <span class="text-[10px] text-gray-200">${region.code}</span>
+                            
+                        </div>
+                        <span class="text-[10px] font-medium text-gray-200">${region.count}</span>
                     </div>
-                    <span class="text-[10px] font-medium text-gray-200">${region.count}</span>
-                </div>
-            `).join('');
+                `;
+                    }).join('');
         }
 
         // 10. 更新分组统计和到期时间显示
@@ -864,8 +876,8 @@ function updateTotalStats(totals) {
                 offline: stats.offline,
                 expiringCount,
                 topRegions,
-                currentDownload: strB(stats.download),
-                currentUpload: strB(stats.upload),
+                currentDownload: strBs(stats.download),
+                currentUpload: strBs(stats.upload),
                 totalDownload: strB(stats.downloadTotal),
                 totalUpload: strB(stats.uploadTotal)
             });
@@ -995,20 +1007,20 @@ const StatsController = {
         const currentDownloadSpeed = document.getElementById('current-download-speed');
         const currentUploadSpeed = document.getElementById('current-upload-speed');
         if (currentDownloadSpeed) {
-            currentDownloadSpeed.textContent = strB(netStats.downloadSpeed);
+            currentDownloadSpeed.textContent = strBs(netStats.downloadSpeed);
         }
         if (currentUploadSpeed) {
-            currentUploadSpeed.textContent = strB(netStats.uploadSpeed);
+            currentUploadSpeed.textContent = strBs(netStats.uploadSpeed);
         }
 
         // 更新实时带宽 - 移动端
         const currentDownloadSpeedMobile = document.getElementById('current-download-speed-mobile');
         const currentUploadSpeedMobile = document.getElementById('current-upload-speed-mobile');
         if (currentDownloadSpeedMobile) {
-            currentDownloadSpeedMobile.textContent = strB(netStats.downloadSpeed);
+            currentDownloadSpeedMobile.textContent = strBs(netStats.downloadSpeed);
         }
         if (currentUploadSpeedMobile) {
-            currentUploadSpeedMobile.textContent = strB(netStats.uploadSpeed);
+            currentUploadSpeedMobile.textContent = strBs(netStats.uploadSpeed);
         }
 
         // 更新总流量 - 桌面端
@@ -1329,11 +1341,11 @@ function applySort(type, direction) {
                 value = Number(card.querySelector('[id$="_MEM"]')?.dataset.memory || 0);
                 break;
             case 'download':
-                const downloadText = card.querySelector('[id$="_NET_IN"]')?.textContent || '0 bps';
+                const downloadText = card.querySelector('[id$="_NET_IN"]')?.textContent || '0 B/s';
                 value = parseNetworkValue(downloadText);
                 break;
             case 'upload':
-                const uploadText = card.querySelector('[id$="_NET_OUT"]')?.textContent || '0 bps';
+                const uploadText = card.querySelector('[id$="_NET_OUT"]')?.textContent || '0 B/s';
                 value = parseNetworkValue(uploadText);
                 break;
             case 'expiration':
@@ -1349,20 +1361,22 @@ function applySort(type, direction) {
         return value;
     };
 
+    // 'B/s', 'KB/s', 'MB/s', 'GB/s', 'TB/s'
     // 解析网络值的辅助函数
     const parseNetworkValue = (text) => {
-        const match = text.match(/^([\d.]+)\s*(\w+)$/);
+        const match = text.match(/^([\d.]+)\s*([^\s]+)$/);
         if (!match) return 0;
+
 
         const [_, value, unit] = match;
         const numValue = parseFloat(value);
 
-        switch (unit.toLowerCase()) {
-            case 'bps': return numValue;
-            case 'kbps': return numValue * 1000;
-            case 'mbps': return numValue * 1000000;
-            case 'gbps': return numValue * 1000000000;
-            case 'tbps': return numValue * 1000000000000;
+        switch (unit) {
+            case 'B/s': return numValue;
+            case 'KB/s': return numValue * 1000;
+            case 'MB/s': return numValue * 1000000;
+            case 'GB/s': return numValue * 1000000000;
+            case 'TB/s': return numValue * 1000000000000;
             default: return 0;
         }
     };
@@ -1433,6 +1447,24 @@ function applyCurrentSort() {
         applySort(type, direction);
     }
 }
+// 全局变量用于存储定时器ID
+let realtimeSortTimer = null;
+
+function startRealtimeSort() {
+    if (realtimeSortTimer) return; // 如果已经启动，则不重复启动
+    realtimeSortTimer = setInterval(() => {
+        if (window.currentSortConfig) {
+            applySort(window.currentSortConfig.type, window.currentSortConfig.direction);
+        }
+    }, 1000); // 每1000毫秒调用一次
+}
+
+function stopRealtimeSort() {
+    if (realtimeSortTimer) {
+        clearInterval(realtimeSortTimer);
+        realtimeSortTimer = null;
+    }
+}
 
 // 初始化排序按钮事件
 function initSortButtons() {
@@ -1447,7 +1479,7 @@ function initSortButtons() {
         defaultSortBtn.querySelector('i').textContent = 'expand_more';
         console.debug('已设置默认排序按钮:', defaultSortBtn.dataset.sort);
 
-        // 初始化时执行一次默认排序
+        // 只在这里调用一次默认排序
         applySort('default', 'desc');
     } else {
         console.warn('未找到默认排序按钮');
@@ -1473,24 +1505,29 @@ function initSortButtons() {
             }
 
             applySort(type, direction);
+            // 同时更新全局配置
+            window.currentSortConfig = { type, direction };
         });
     });
 
-    // 实时排序复选框事件
+    // 为实时排序复选框统一绑定事件（不要重复绑定）
     const realtimeSort = document.getElementById('realtime-sort');
     if (realtimeSort) {
-        realtimeSort.checked = true;
-        console.debug('已启用实时排序');
+        // 设定初始状态
+        realtimeSort.checked = false;
         realtimeSort.addEventListener('change', () => {
-            console.debug('实时排序设置变更:', realtimeSort.checked);
             if (realtimeSort.checked) {
-                applyCurrentSort();
+                startRealtimeSort();
+            } else {
+                stopRealtimeSort();
             }
         });
     } else {
         console.warn('未找到实时排序复选框');
     }
 }
+
+
 
 // 添加设置变更监听
 document.addEventListener('DOMContentLoaded', () => {
@@ -1503,6 +1540,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 设置复选框初始状态
     const sensitiveCheckbox = document.getElementById('show-sensitive');
     const offlineCheckbox = document.getElementById('hide-offline');
+
 
     if (sensitiveCheckbox) {
         sensitiveCheckbox.checked = settings.hideSensitive;

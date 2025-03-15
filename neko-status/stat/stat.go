@@ -97,6 +97,7 @@ func GetStat() (map[string]interface{}, error) {
 			"configfs":        true,
 			"autofs":          true,
 			"overlay":         true,
+			"nsfs":            true,
 			// ... 其他你不想统计的类型
 		}
 		if skipFSTypes[p.Fstype] {

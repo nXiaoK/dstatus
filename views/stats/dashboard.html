@@ -43,7 +43,7 @@
                     <span class="text-sm mr-1"><img src="https://ipdata.co/flags/cn.png" alt="CN" class="w-4 h-4 mr-1" 
                         onerror="this.onerror=null;this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22></svg>';"/></span>
                     <span class="text-xs font-medium">CN</span>
-                    <span class="text-xs font-bold ml-1">1</span>
+                    <span class="text-xs font-bold ml-1">0</span>
                 </div>
             </div>
             <!-- 重复8次预占位 -->
@@ -200,6 +200,14 @@
                     <i class="material-icons text-base">folder</i>
                     <span class="ml-1.5 text-xs sm:text-sm">分组</span>
                 </a>
+
+                <div class="flex items-center px-2 h-8 text-sm text-gray-400">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" id="realtime-sort" class="sr-only peer">
+                        <div class="relative w-8 sm:w-9 h-4 sm:h-5 bg-gray-700 rounded-full peer peer-checked:bg-blue-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-3 sm:after:h-4 after:w-3 sm:after:w-4 after:transition-all"></div>
+                        <span class="ml-1.5 text-xs sm:text-sm">实时</span>
+                    </label>
+                </div>
                 <!-- 拖拽排序开关 -->
                 <div class="flex items-center px-2 h-8 text-sm text-gray-400">
                     <label class="flex items-center cursor-pointer">
