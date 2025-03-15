@@ -18,10 +18,10 @@ module.exports = function(app) {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const backupPath = path.join(process.cwd(), 'database', `backup-${timestamp}.db.db`);
         
-        console.log('===== 数据库备份开始 =====');
-        console.log('时间:', new Date().toLocaleString());
-        console.log('用户IP:', req.ip);
-        console.log('备份路径:', backupPath);
+       //  console.log('===== 数据库备份开始 =====');
+       //  console.log('时间:', new Date().toLocaleString());
+       //  console.log('用户IP:', req.ip);
+       //  console.log('备份路径:', backupPath);
         
         try {
             // 确保备份目录存在
@@ -33,19 +33,19 @@ module.exports = function(app) {
 
             // 获取原始数据库大小
             const dbSize = fs.statSync(path.join(process.cwd(), 'database', 'db.db')).size;
-            console.log('原始数据库大小:', (dbSize / 1024 / 1024).toFixed(2) + 'MB');
+           //  console.log('原始数据库大小:', (dbSize / 1024 / 1024).toFixed(2) + 'MB');
 
             // 创建备份
-            console.log('开始创建备份文件...');
+         //    console.log('开始创建备份文件...');
             await db.DB.backup(backupPath);
             
             // 获取备份文件大小
             const backupSize = fs.statSync(backupPath).size;
-            console.log('备份文件创建成功');
-            console.log('备份文件大小:', (backupSize / 1024 / 1024).toFixed(2) + 'MB');
+          //   console.log('备份文件创建成功');
+          //   console.log('备份文件大小:', (backupSize / 1024 / 1024).toFixed(2) + 'MB');
 
             // 发送文件并在发送后删除
-            console.log('开始发送备份文件...');
+         //    console.log('开始发送备份文件...');
             res.download(backupPath, `dstatus-backup-${timestamp}.db.db`, (err) => {
                 if (err) {
                     console.error('下载过程出错:', err);
@@ -134,22 +134,22 @@ module.exports = function(app) {
                 }
                 
                 const stats = fs.statSync(file.tempFilePath);
-                console.log('临时文件状态:', {
-                    size: stats.size,
-                    mode: stats.mode,
-                    uid: stats.uid,
-                    gid: stats.gid
-                });
+                // console.log('临时文件状态:', {
+                //     size: stats.size,
+                //     mode: stats.mode,
+                //     uid: stats.uid,
+                //     gid: stats.gid
+                // });
                 
-                console.log('开始验证数据库文件:', file.tempFilePath);
+               //  console.log('开始验证数据库文件:', file.tempFilePath);
                 testDb = new Database(file.tempFilePath, { verbose: console.log });
                 
                 // 获取所有表名
                 const tables = testDb.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
-                console.log('原始表信息:', tables);
+                // console.log('原始表信息:', tables);
                 
                 const tableNames = tables.map(t => t.name.toLowerCase());
-                console.log('发现的表:', tableNames.join(', '));
+                // console.log('发现的表:', tableNames.join(', '));
                 
                 // 1. 基本的表结构验证
                 const requiredTables = [
@@ -199,9 +199,9 @@ module.exports = function(app) {
                 const serverCount = testDb.prepare('SELECT COUNT(*) as count FROM servers').get();
                 const groupCount = testDb.prepare('SELECT COUNT(*) as count FROM groups').get();
                 
-                console.log('数据验证结果:');
-                console.log('- 服务器数量:', serverCount.count);
-                console.log('- 分组数量:', groupCount.count);
+                // console.log('数据验证结果:');
+                // console.log('- 服务器数量:', serverCount.count);
+                // console.log('- 分组数量:', groupCount.count);
                 
                 testDb.close();
                 console.log('数据库验证成功');

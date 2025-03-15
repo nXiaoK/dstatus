@@ -249,6 +249,7 @@ svr.get("/stats/:sid/traffic", async (req, res) => {
     try {
         // 获取traffic表中的ds数据
         const trafficData = await db.traffic.get(sid);
+        // console.log('trafficData---->',trafficData)
         
         res.json({
             data: {
@@ -329,7 +330,7 @@ class IPLocationService {
 
             // 检查最后更新时间
             const lastUpdate = this.lastUpdateTime.get(sid);
-            if (lastUpdate && Date.now() - lastUpdate < 60000) { // 至少间隔1分钟
+            if (lastUpdate && Date.now() - lastUpdate < 10000) { // 至少间隔10s
                 return server.data;
             }
 
@@ -340,6 +341,8 @@ class IPLocationService {
 
             // 解析服务器数据
             const serverData = this._parseServerData(server.data);
+
+            console.log('是否需要位置更新',this._needsUpdate(serverData));
             
             // 检查是否需要更新
             if (!this._needsUpdate(serverData)) {
@@ -367,10 +370,10 @@ class IPLocationService {
             }
 
             // 检查API限制
-            await this._checkRateLimit();
+            // await this._checkRateLimit();
 
             // 强制延迟
-            await this._enforceDelay();
+            // await this._enforceDelay();
 
             // 获取位置信息
             const locationInfo = await this._fetchLocationInfo(ip);
@@ -474,7 +477,7 @@ class IPLocationService {
             location: {
                 country: {
                     code: 'LO',
-                    flag_url:'https://ipdata.co/flags/de.png',
+                    flag_url:'',
                     updated_at: Date.now()
                 }
             }
@@ -774,7 +777,7 @@ schedule.scheduleJob({second:0},()=>{
 
             let totalRead = 0;
             let totalWrite = 0;
-            for (const mount in stat.stat.disk.devices) {
+            for (const mount in stat.stat.disk?.devices) {
                 const dev = stat.stat.disk.devices[mount];
                 if (dev.read_rate) totalRead += dev.read_rate;
                 if (dev.write_rate) totalWrite += dev.write_rate;

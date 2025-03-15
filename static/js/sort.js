@@ -1469,9 +1469,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dragSortToggle = document.getElementById('enable-drag-sort');
     // 检查是否为游客
     const isGuest = document.body.classList.contains('guest-user');
-    console.log('----------->' + dragSortToggle)
     if (dragSortToggle === null) {
-        console.log('-------------------')
         // 确保初始状态下禁用拖拽
         document.querySelectorAll('.server-card').forEach(card => {
             card.draggable = false;

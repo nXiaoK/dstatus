@@ -26,9 +26,9 @@ postcss([
   .process(css, { from: inputFile, to: outputFile })
   .then(result => {
     fs.writeFileSync(outputFile, result.css);
-    console.log('CSS 构建完成！');
+    // console.log('CSS 构建完成！');
   })
   .catch(error => {
-    console.error('CSS 构建失败:', error);
+    // console.error('CSS 构建失败:', error);
     process.exit(1);
   }); 

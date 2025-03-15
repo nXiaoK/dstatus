@@ -39,7 +39,7 @@
                                         {% if node.data.location and node.data.location.country and
                                         node.data.location.country.flag_url %}
                                         <!-- 如果flag_url存在且不为空，用<img>显示国旗 -->
-                                        <img class="country-flag text-xl h-5 inline-block"
+                                        <img class="country-flag text-xl w-5 h-4 inline-block"
                                             src="{{ node.data.location.country.flag_url }}"
                                             alt="{{ node.data.location.country.code }}"
                                             title="{{ node.data.location.country.code }}" />

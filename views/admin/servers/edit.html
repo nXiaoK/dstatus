@@ -257,7 +257,7 @@ function dateStringToTimestamp(dateString) {
 
 // 初始化表单数据
 function initForm(server) {
-    console.log('初始化服务器数据:', server);
+    // console.log('初始化服务器数据:', server);
     
     // 基本信息
     document.getElementById('sid').value = server.sid;
@@ -271,7 +271,7 @@ function initForm(server) {
     // SSH设置
     document.getElementById('edit_ssh_host').value = server.data.ssh.host;
     document.getElementById('edit_ssh_port').value = server.data.ssh.port || '';
-    document.getElementById('edit_ssh_username').value = server.data./admin/servers/:sid/editssh.username || '';
+    document.getElementById('edit_ssh_username').value = server.data.ssh.username || '';
     document.getElementById('edit_ssh_password').value = server.data.ssh.password || '';
     document.getElementById('edit_ssh_pri').value = server.data.ssh.privateKey || '';
 
@@ -336,7 +336,7 @@ async function edit() {
             traffic_calibration_value: TrafficFormat.gbToBytes(V('edit_traffic_calibration_value'))
         };
 
-        console.log('提交的数据:', requestData);
+        // console.log('提交的数据:', requestData);
         
         const sid = V('sid');
         const res = await postjson(`/admin/servers/${sid}/edit`, requestData);

@@ -145,7 +145,7 @@ svr.ws('/ws/stats', function(ws, req) {
     if(wsClients.has(clientIP)) {
         const existingConnections = wsClients.get(clientIP);
         if(existingConnections >= MAX_CONNECTIONS_PER_IP) {
-            console.log(`[${new Date().toISOString()}] 连接被拒绝 - IP:${clientIP} 超出最大连接数`);
+            // console.log(`[${new Date().toISOString()}] 连接被拒绝 - IP:${clientIP} 超出最大连接数`);
             ws.close();
             return;
         }
@@ -202,7 +202,7 @@ svr.ws('/ws/stats', function(ws, req) {
         } else {
             wsClients.set(clientIP, count - 1);
         }
-        console.log(`[${new Date().toISOString()}] WebSocket连接关闭 - IP:${clientIP}`);
+        // console.log(`[${new Date().toISOString()}] WebSocket连接关闭 - IP:${clientIP}`);
     });
     
     // 5. 错误处理

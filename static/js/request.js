@@ -25,7 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 lastChartUpdate = now;
             }
 
-            skipUpdate = !skipUpdate; // 下次反转
         } catch (err) {
             console.error('Global fetch error:', err);
             clearAllData(); // from stat.js (optional)

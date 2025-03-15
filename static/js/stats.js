@@ -796,8 +796,7 @@ function updateTotalStats(totals) {
                 if (!regionStats.has(key)) {
                     regionStats.set(key, {
                         code: key,
-                        name: country.name_zh || country.name,
-                        flag: country.flag || '🏳️',
+                        flag_url: country.flag_url || '',
                         count: 0
                     });
                 }

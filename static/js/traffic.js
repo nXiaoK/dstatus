@@ -9,6 +9,7 @@ function safeParseTrafficData() {
             console.warn('Traffic data element not found or empty');
             return { hs: [], ds: [], ms: [] };
         }
+        console.log('element.value'+element.value)
         return JSON.parse(element.value);
     } catch (e) {
         console.error('Error parsing traffic data:', e);
@@ -17,6 +18,7 @@ function safeParseTrafficData() {
 }
 
 var traffic = safeParseTrafficData(), hs_tot = 0, ds_tot = 0, ms_tot = 0;
+
 
 // 安全的数据格式化
 function safeFormatTraffic(value) {

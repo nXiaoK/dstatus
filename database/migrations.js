@@ -168,7 +168,7 @@ module.exports = (DB) => {
 
         // 获取当前版本
         const currentVersion = getCurrentVersion();
-        console.log('当前数据库版本:', currentVersion);
+        // console.log('当前数据库版本:', currentVersion);
 
         // 执行待迁移的版本
         for (const migration of migrations) {
@@ -185,7 +185,7 @@ module.exports = (DB) => {
                         // 记录成功状态
                         recordMigration(migration.version, migration.name, 'success');
                         DB.prepare('COMMIT').run();
-                        console.log(`迁移成功: ${migration.name}`);
+                        // console.log(`迁移成功: ${migration.name}`);
                     } else {
                         // 记录失败状态并回滚
                         recordMigration(migration.version, migration.name, 'failed');

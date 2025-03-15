@@ -147,8 +147,9 @@ async function updateTrafficDisplay() {
         console.log('[Traffic Utils] 开始请求实时流量数据...');
         try {
             const response = await fetch(`/stats/${nodeId}/traffic`);
-            const { data, error } = await response.json();
             
+            const { data, error } = await response.json();
+            // console.log('data----->',data)
             // 验证实时数据的有效性
             if (!error && data && Array.isArray(data.ds) && data.ds.length > 0) {
                 const realTimeData = {
@@ -169,6 +170,7 @@ async function updateTrafficDisplay() {
                     calibrationDate: realTimeData.traffic_calibration_date,
                     calibrationValue: realTimeData.traffic_calibration_value
                 });
+                console.log('usedTraffic----->',usedTraffic)
 
                 // 只有当计算出的流量大于0时才更新
                 if (usedTraffic > 0) {

@@ -61,7 +61,7 @@ const RestartManager = {
                 new Promise((resolve) => {
                     try {
                         global.db.DB.close();
-                        console.log('数据库连接已关闭');
+                        // console.log('数据库连接已关闭');
                         resolve();
                     } catch (err) {
                         console.error('关闭数据库连接失败:', err);

@@ -30,7 +30,7 @@ module.exports = (DB) => {
             .some(col => col.name === 'id');
 
         if (needMigration) {
-            console.log(`开始迁移表 ${table} ...`);
+            // console.log(`开始迁移表 ${table} ...`);
             // 开始事务
             DB.prepare('BEGIN').run();
             try {
@@ -84,7 +84,7 @@ module.exports = (DB) => {
 
                 // 提交事务
                 DB.prepare('COMMIT').run();
-                console.log(`表 ${table} 迁移完成`);
+                // console.log(`表 ${table} 迁移完成`);
             } catch (err) {
                 // 发生错误时回滚
                 DB.prepare('ROLLBACK').run();
